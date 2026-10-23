@@ -39,6 +39,7 @@
   --c0:#6EA6E6;--c1:#EE8A6E;--c2:#5CC28A;--c3:#B98AE0;--c4:#E8B04A;--c5:#4CC6C6;--c6:#E07AB0;--c7:#A9C25A;
   color-scheme:dark}
 [hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -76,8 +77,14 @@ main{min-height:0;position:relative}
 .tool svg{width:26px;height:26px;flex:none}
 .stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--canvas)}
 #cv{display:block;touch-action:none;cursor:crosshair}
-.hud{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.layers{position:absolute;right:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.hud{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none}
+.hud>*{pointer-events:auto}
+.layers{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.selbar{position:absolute;left:10px;right:10px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;pointer-events:none}
+.selbar>*{pointer-events:auto}
+.selbar .tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:13px;max-width:100%}
+.selbar .tag b{font-weight:600}
+.selbar .btn{min-height:36px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .scale{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
@@ -212,12 +219,13 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
       <div class="tools" id="tools"></div>
       <div class="stage" id="stage">
         <canvas id="cv"></canvas>
-        <div class="layers" id="layers"></div>
+        <div class="selbar" id="selbar"></div>
         <div class="hud">
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
           <button class="btn" id="zFit" type="button">Încadrează</button>
           <span class="scale" id="scaleLbl"></span>
+          <div class="layers" id="layers"></div>
         </div>
         <div class="hint" id="hint" hidden>
           <h3>Desenează prima cameră</h3>
@@ -574,7 +582,8 @@ function draw(){
   if(sel){
     ctx.strokeStyle=C.sel;ctx.lineWidth=2.5;
     if(sel.kind==='item'){const it=P.items.find(i=>i.id===sel.id);if(it){ctx.beginPath();ctx.arc(sx(it.x),sy(it.y),r0+6,0,Math.PI*2);ctx.stroke()}}
-    else{const r=P.rooms.find(i=>i.id===sel.id);if(r){ctx.setLineDash([8,5]);ctx.strokeRect(sx(r.x)-4,sy(r.y)-4,r.w*view.s+8,r.h*view.s+8);ctx.setLineDash([])}}
+    else if(sel.kind==='room'){const r=P.rooms.find(i=>i.id===sel.id);if(r){ctx.setLineDash([8,5]);ctx.strokeRect(sx(r.x)-4,sy(r.y)-4,r.w*view.s+8,r.h*view.s+8);ctx.setLineDash([]);
+      for(const[hx,hy]of HANDLES){const X=sx(r.x+r.w*(hx+1)/2),Y=sy(r.y+r.h*(hy+1)/2),k=hx&&hy?7:6;ctx.fillStyle=C.canvas;ctx.strokeStyle=C.sel;ctx.lineWidth=2.5;ctx.beginPath();hx&&hy?ctx.rect(X-k,Y-k,2*k,2*k):ctx.arc(X,Y,k,0,Math.PI*2);ctx.fill();ctx.stroke()}}}
   }
   if(gest&&gest.k==='room'){
     const x=Math.min(gest.x0,gest.x1),y=Math.min(gest.y0,gest.y1),w=Math.abs(gest.x1-gest.x0),h=Math.abs(gest.y1-gest.y0);
@@ -610,6 +619,13 @@ function placeDoor(x,y,keep){
   const d={o:best.o,c:best.c,t,w,hinge:keep?keep.hinge:0,s:best.s};
   if(!keep){const q=doorRooms(P,d);if(!q.ot){d.kind='ext';d.w=.9;const l2=best.lo+.55,h2=best.hi-.55;d.t=l2>h2?(best.lo+best.hi)/2:clamp(d.t,l2,h2)}else d.kind='int'}
   return d;
+}
+const HANDLES=[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+function hitHandle(X,Y){
+  if(!sel||sel.kind!=='room')return null;const r=P.rooms.find(i=>i.id===sel.id);if(!r)return null;
+  let b=null,bd=20;
+  for(const[hx,hy]of HANDLES){const d=Math.hypot(sx(r.x+r.w*(hx+1)/2)-X,sy(r.y+r.h*(hy+1)/2)-Y);if(d<bd){bd=d;b={r,hx,hy}}}
+  return b;
 }
 function hitDoor(X,Y){
   let b=null,bd=14;
@@ -658,6 +674,8 @@ cv.addEventListener('pointerdown',e=>{
   if(ptrs.size>2)return;
   const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
   if(tool==='select'){
+    const hd=hitHandle(X,Y);
+    if(hd){const r=hd.r;gest={k:'resize',id:r.id,hx:hd.hx,hy:hd.hy,o:{x:r.x,y:r.y,w:r.w,h:r.h},its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),dos:P.doors.map(d=>[d,d.c,d.t]),X,Y,moved:false};return}
     const it=hitItem(X,Y);
     if(it){sel={kind:'item',id:it.id};gest={k:'moveItem',id:it.id,X,Y,moved:false};renderInspector();draw();return}
     const dr=hitDoor(X,Y);
@@ -675,7 +693,26 @@ cv.addEventListener('pointermove',e=>{
   const g=gest;if(!g)return;
   if(g.k==='pinch'){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;view.s=clamp(g.s*d/g.d,10,400);view.ox=cx-g.wx*view.s;view.oy=cy-g.wy*view.s;draw();return}
   const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
-  if(g.k==='pan'){if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;g.moved=true;view.ox=g.ox+X-g.X;view.oy=g.oy+Y-g.Y;draw();return}
+  if(g.k==='resize'){
+    if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<4)return;
+    if(!g.moved){snap();g.moved=true}
+    const r=P.rooms.find(i=>i.id===g.id);if(!r)return;
+    const o=g.o,q=snapRoomPt(x,y);let L=o.x,Rr=o.x+o.w,Tp=o.y,B=o.y+o.h;
+    if(g.hx<0)L=Math.min(q.x,Rr-.5);if(g.hx>0)Rr=Math.max(q.x,L+.5);
+    if(g.hy<0)Tp=Math.min(q.y,B-.5);if(g.hy>0)B=Math.max(q.y,Tp+.5);
+    r.x=L;r.y=Tp;r.w=+(Rr-L).toFixed(2);r.h=+(B-Tp).toFixed(2);
+    const mv=(v,a,b)=>Math.abs(v-a)<.02?b:v;
+    for(const[i,ix,iy]of g.its){let nx=ix,ny=iy;if(g.hx<0)nx=mv(ix,o.x,L);if(g.hx>0)nx=mv(ix,o.x+o.w,Rr);if(g.hy<0)ny=mv(iy,o.y,Tp);if(g.hy>0)ny=mv(iy,o.y+o.h,B);i.x=clamp(nx,L,Rr);i.y=clamp(ny,Tp,B)}
+    for(const[d,dc,dt]of g.dos){
+      if(d.o==='v'&&dt>o.y-1e-6&&dt<o.y+o.h+1e-6){if(g.hx<0&&Math.abs(dc-o.x)<.02)d.c=L;if(g.hx>0&&Math.abs(dc-o.x-o.w)<.02)d.c=Rr}
+      if(d.o==='h'&&dt>o.x-1e-6&&dt<o.x+o.w+1e-6){if(g.hy<0&&Math.abs(dc-o.y)<.02)d.c=Tp;if(g.hy>0&&Math.abs(dc-o.y-o.h)<.02)d.c=B}
+      const onH=d.o==='h'&&(Math.abs(d.c-r.y)<.02||Math.abs(d.c-r.y-r.h)<.02)&&dt>o.x-1e-6&&dt<o.x+o.w+1e-6;
+      const onV=d.o==='v'&&(Math.abs(d.c-r.x)<.02||Math.abs(d.c-r.x-r.w)<.02)&&dt>o.y-1e-6&&dt<o.y+o.h+1e-6;
+      if(onH||onV){const[lo,hi]=onH?[r.x,r.x+r.w]:[r.y,r.y+r.h],a=lo+d.w/2+.1,b=hi-d.w/2-.1;d.t=a>b?(lo+hi)/2:clamp(dt,a,b)}
+    }
+    R=compute(P);draw();renderDyn();return;
+  }
+  if(g.k==='pan'){if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<(e.pointerType==='mouse'?5:10))return;g.moved=true;view.ox=g.ox+X-g.X;view.oy=g.oy+Y-g.Y;draw();return}
   if(g.k==='moveItem'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     if(!g.moved){snap();g.moved=true}
@@ -705,7 +742,7 @@ function up(e,cancel){
   if(g.k==='pinch'){if(!ptrs.size)gest=null;return}
   gest=null;if(cancel){if(g.moved)changed();else draw();return}
   if(g.k==='pan'){if(!g.moved){sel=g.room?{kind:'room',id:g.room}:null;renderInspector();draw()}return}
-  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'){if(g.moved)changed();return}
+  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='resize'){if(g.moved)changed(true);return}
   if(g.k==='room'){
     const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
     if(w>=.5&&h>=.5){snap();const r={id:uid(),name:'Cameră '+(P.rooms.length+1),type:'altul',x,y,w:+w.toFixed(2),h:+h.toFixed(2)};P.rooms.push(r);sel={kind:'room',id:r.id};changed(true)}else draw();
@@ -744,7 +781,7 @@ function renderTools(){
   $('#tools').innerHTML=TOOLS.map(([l,ts])=>`<div class="tg"><span class="tg-l">${l}</span>${ts.map(t=>`<button class="tool" type="button" data-tool="${t}" aria-pressed="${t===tool}" title="${esc(T[t]?T[t].n:SHORT[t])}">${svgSym(t)}<span>${SHORT[t]}</span></button>`).join('')}</div>`).join('');
 }
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(!b)return;setTool(b.dataset.tool)});
-function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
+function setTool(t){tool=t;if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
 function renderLayers(){
   const L=[['routes','Trasee'],['tags','Circuite'],['dims','Cote']];
   $('#layers').innerHTML=L.map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
@@ -805,7 +842,15 @@ function renderInspector(){
       <label class="ck full"><input type="checkbox" data-s="proj" data-f="spd" id="p-spd"${P.spd?' checked':''}> Descărcător de supratensiune în tablou</label>
     </div></div>`;
   }
-  insp.innerHTML=h;renderDyn();
+  insp.innerHTML=h;renderDyn();renderSelbar();
+}
+function renderSelbar(){
+  const el=$('#selbar');if(!el)return;
+  if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
+  if(!sel){el.innerHTML='<span class="tag muted">Atinge o cameră, o ușă sau un element ca să-l editezi sau să-l ștergi.</span>';return}
+  const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
+  const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':o.name,help=sel.kind==='room'?'Trage de cercuri și pătrate ca s-o redimensionezi. Trage din interior ca s-o muți.':'Trage ca să-l muți.';
+  el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">Închide</button>`;
 }
 function renderDyn(){
   const el=$('#insDyn');if(!el)return;
@@ -848,6 +893,19 @@ insp.addEventListener('input',e=>{
   if(sc==='proj'&&k==='name'){renderProjSel();const hh=insp.querySelector('h2');if(hh)hh.textContent=o.name}
   changed();
 });
+function deleteSel(){
+  if(!sel)return;const k=sel.kind;snap();
+  if(k==='item')P.items=P.items.filter(i=>i.id!==sel.id);
+  else if(k==='door')P.doors=P.doors.filter(i=>i.id!==sel.id);
+  else{P.items=P.items.filter(i=>i.room!==sel.id);P.rooms=P.rooms.filter(r=>r.id!==sel.id)}
+  sel=null;changed(true);toast(k==='room'?'Camera a fost ștearsă. Apasă ↶ ca s-o recuperezi.':'Șters. Apasă ↶ ca să recuperezi.');
+}
+$('#selbar').addEventListener('click',e=>{
+  const b=e.target.closest('[data-sb]');if(!b)return;
+  if(b.dataset.sb==='del')deleteSel();
+  else if(b.dataset.sb==='done')setTool('select');
+  else{sel=null;renderInspector();draw()}
+});
 insp.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b||!sel)return;
   const act=b.dataset.act,d=sel.kind==='door'?P.doors.find(i=>i.id===sel.id):null;
@@ -858,11 +916,7 @@ insp.addEventListener('click',e=>{
     else if(act==='sw'){const r=P.rooms.find(x=>x.id===b.dataset.room),sp=r&&switchSpot(P,d,r);if(sp)P.items.push({id:uid(),type:'intr',room:r.id,x:sp.x,y:sp.y})}
     changed(true);return;
   }
-  snap();
-  if(sel.kind==='item')P.items=P.items.filter(i=>i.id!==sel.id);
-  else if(sel.kind==='door')P.doors=P.doors.filter(i=>i.id!==sel.id);
-  else{P.items=P.items.filter(i=>i.room!==sel.id);P.rooms=P.rooms.filter(r=>r.id!==sel.id)}
-  sel=null;changed(true);
+  deleteSel();
 });
 
 function renderCalc(){
@@ -1044,7 +1098,8 @@ new ResizeObserver(()=>{if(tab==='plan')resize()}).observe(stage);
 
 readColors();renderTools();renderLayers();renderProjSel();
 R=compute(P);
-const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();renderInspector();
+renderInspector();
+const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 const h0=(location.hash||'').slice(1);if(['calcul','materiale','lucrari'].includes(h0))showTab(h0);
 })();
 </script>
