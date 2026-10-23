@@ -59,7 +59,7 @@ button{cursor:pointer}
 .tabs button{border:0;background:none;padding:6px 12px;border-radius:6px;font-weight:500;white-space:nowrap;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .acts{display:flex;gap:6px;margin-left:auto;align-items:center}
-.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.sync{display:inline-flex;min-height:24px;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
 .sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .sync[data-s="ok"]{color:var(--ok)}
 .sync[data-s="ok"]::before{background:var(--ok)}
@@ -73,20 +73,21 @@ button{cursor:pointer}
 .btn svg{width:16px;height:16px}
 main{min-height:0;position:relative}
 .view{height:100%;min-height:0}
-.plan{display:grid;grid-template-columns:96px minmax(0,1fr) 300px}
-.tools{display:flex;flex-direction:column;gap:12px;padding:10px 8px;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line)}
-.tg{display:flex;flex-direction:column;gap:3px}
-.tg-l{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-left:4px}
-.tool{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:54px;padding:6px 3px;border:1px solid transparent;border-radius:7px;background:none;font-size:10.5px;line-height:1.15;text-align:center;color:var(--ink)}
+.plan{display:grid;grid-template-columns:68px minmax(0,1fr);position:relative}
+.tools{display:flex;flex-direction:column;gap:6px;padding:6px 4px;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line)}
+.tg{display:flex;flex-direction:column;gap:2px}
+.tg+.tg{border-top:1px solid var(--line);padding-top:6px}
+.tg-l{display:none;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-left:4px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:1px;min-height:48px;padding:5px 2px;border:1px solid transparent;border-radius:7px;background:none;font-size:9.5px;line-height:1.15;text-align:center;color:var(--ink)}
 .tool:hover{background:var(--bg)}
 .tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.tool svg{width:26px;height:26px;flex:none}
+.tool svg{width:24px;height:24px;flex:none}
 .stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--canvas)}
 #cv{display:block;touch-action:none;cursor:crosshair}
-.hud{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none}
+.hud{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none}
 .hud>*{pointer-events:auto}
 .layers{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
-.selbar{position:absolute;left:10px;right:10px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;pointer-events:none}
+.selbar{position:absolute;left:10px;right:10px;top:10px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:8px;pointer-events:none}
 .selbar>*{pointer-events:auto}
 .selbar .tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:13px;max-width:100%}
 .selbar .tag b{font-weight:600}
@@ -97,7 +98,7 @@ main{min-height:0;position:relative}
 .hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(380px,calc(100% - 32px));padding:18px 20px;border-radius:10px;background:var(--panel);border:1px solid var(--line);text-align:center;pointer-events:none}
 .hint h3{margin:0 0 6px;font-family:var(--f-display);font-size:22px;font-weight:600}
 .hint p{margin:0;color:var(--muted)}
-.inspector{overflow-y:auto;padding:16px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;gap:16px;min-width:0}
+.inspector{position:absolute;top:10px;right:10px;bottom:62px;width:min(340px,calc(100% - 88px));z-index:6;overflow-y:auto;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:16px;min-width:0}
 .inspector h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:22px;line-height:1.1;text-wrap:balance}
 .inspector h4{margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .ihead{display:flex;gap:10px;align-items:center}
@@ -183,16 +184,32 @@ dialog h2{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:
 dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--canvas);padding:8px;resize:vertical}
 .dl{display:flex;flex-direction:column;gap:12px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--canvas);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20}
-@media (max-width:1100px){
-  .plan{grid-template-columns:92px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
-  .inspector{grid-column:1/-1;max-height:36vh;border-left:0;border-top:1px solid var(--line)}
+.insp-x{position:sticky;top:0;align-self:flex-end;margin:-8px -8px -40px 0;z-index:1;width:36px;height:36px;justify-content:center}
+.stage.io .selbar{right:360px}
+.btn .lbl{white-space:nowrap}
+body.focus .top{display:none}
+body.focus #app{grid-template-rows:minmax(0,1fr)}
+body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:1180px){
+  .bt,.sync-t{display:none}
+  .top{gap:6px 10px;padding-block:6px}
+  .proj select{max-width:170px}
+  #newProj .lbl,#ioBtn .lbl{display:none}
+  #newProj,#ioBtn{padding:6px 8px}
+  .tabs button{padding:6px 10px}
+}
+@media (max-width:760px),(orientation:portrait) and (max-width:1100px){
+  .inspector{top:auto;left:10px;right:10px;bottom:62px;width:auto;max-height:55%}
+  .stage.io .selbar{right:10px}
+  .scale,#focusBtn .lbl{display:none}
 }
 @media (max-width:640px){
-  .plan{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  .plan{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
   .tools{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--line);padding:6px 8px;gap:6px}
   .tg{flex-direction:row}
+  .tg+.tg{border-top:0;padding-top:0;border-left:1px solid var(--line);padding-left:6px}
   .tg-l{display:none}
-  .tool{min-width:62px}
+  .tool{min-width:56px}
   .kb{grid-template-columns:minmax(0,1fr)}
   .acts{margin-left:0}
   .brand{font-size:20px}
@@ -202,23 +219,22 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
 
 <div id="app">
   <header class="top">
-    <div class="brand"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span>ElectroPlan</div>
+    <div class="brand"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span><span class="bt">ElectroPlan</span></div>
     <div class="proj">
-      <label for="projSel" class="muted" style="font-size:12px">Proiect</label>
-      <select id="projSel"></select>
-      <button class="btn" id="newProj" type="button">Proiect nou</button>
+      <select id="projSel" aria-label="Proiect"></select>
+      <button class="btn" id="newProj" type="button" title="Proiect nou"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Proiect nou</span></button>
     </div>
     <nav class="tabs" role="tablist" aria-label="Secțiuni">
       <button role="tab" data-tab="plan" aria-selected="true" type="button">Plan</button>
-      <button role="tab" data-tab="calcul" aria-selected="false" type="button">Circuite și tablou</button>
+      <button role="tab" data-tab="calcul" aria-selected="false" type="button">Circuite</button>
       <button role="tab" data-tab="materiale" aria-selected="false" type="button">Materiale</button>
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
     </nav>
     <div class="acts">
-      <span class="sync" id="sync" data-s="muted" role="status">Doar pe acest dispozitiv</span>
+      <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="btn ic" id="redoBtn" type="button" title="Refă (Ctrl+Y)" aria-label="Refă"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
-      <button class="btn" id="ioBtn" type="button">Salvare / import</button>
+      <button class="btn" id="ioBtn" type="button" title="Salvare / import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="lbl">Salvare / import</span></button>
     </div>
   </header>
   <main>
@@ -233,13 +249,14 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
           <button class="btn" id="zFit" type="button">Încadrează</button>
           <span class="scale" id="scaleLbl"></span>
           <div class="layers" id="layers"></div>
+          <button class="btn" id="focusBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">Ecran mare</span></button>
         </div>
         <div class="hint" id="hint" hidden>
           <h3>Desenează prima cameră</h3>
           <p>Alege «Cameră» din bara din stânga și trage cu penul pe grilă. Apoi pune tabloul, prizele, luminile și întrerupătoarele.</p>
         </div>
       </div>
-      <aside class="inspector" id="insp" aria-live="polite"></aside>
+      <aside class="inspector" id="insp" aria-live="polite" hidden></aside>
     </section>
     <section class="view doc" id="v-calcul" hidden></section>
     <section class="view doc" id="v-materiale" hidden></section>
@@ -400,7 +417,7 @@ const pbody=p=>{const{updated,...rest}=p;return JSON.stringify(rest)};
 const markSaved=p=>{cloud.last[p.id]=pbody(p)};
 store.projects.forEach(markSaved);
 function persist(){try{store.current=P.id;localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
-function setSync(k){const M={local:['Doar pe acest dispozitiv','muted'],conn:['Se conectează…','muted'],ok:['Salvat în cont','ok'],save:['Se salvează…','muted'],err:['Nesalvat în cont','bad'],ro:['Doar citire','muted'],full:['Spațiu plin în cont','bad']};const el=$('#sync');if(el){el.textContent=M[k][0];el.dataset.s=M[k][1]}}
+function setSync(k){const M={local:['Doar pe acest dispozitiv','muted'],conn:['Se conectează…','muted'],ok:['Salvat în cont','ok'],save:['Se salvează…','muted'],err:['Nesalvat în cont','bad'],ro:['Doar citire','muted'],full:['Spațiu plin în cont','bad']};const el=$('#sync');if(el){el.querySelector('.sync-t').textContent=M[k][0];el.title=M[k][0];el.setAttribute('aria-label',M[k][0]);el.dataset.s=M[k][1]}}
 function save(){clearTimeout(save.t);save.t=setTimeout(()=>{const b=pbody(P);if(cloud.last[P.id]!==b){P.updated=Date.now();P.sample=false;cloud.last[P.id]=b;queuePush(P.id)}persist()},300)}
 function queuePush(id){if(!cloud.col)return;cloud.queue.add(id);flush()}
 async function flush(){
@@ -595,12 +612,12 @@ const cv=$('#cv'),ctx=cv.getContext('2d'),stage=$('#stage'),insp=$('#insp');
 let W=0,Hh=0,dpr=1,C={};
 function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();C={canvas:g('--canvas'),grid:g('--grid'),grid2:g('--grid2'),room:g('--room'),wall:g('--wall'),ink:g('--ink'),muted:g('--muted'),sel:g('--sel'),accent:g('--accent'),circ:[0,1,2,3,4,5,6,7].map(i=>g('--c'+i))}}
 const sx=x=>x*view.s+view.ox,sy=y=>y*view.s+view.oy,wx=X=>(X-view.ox)/view.s,wy=Y=>(Y-view.oy)/view.s;
-function resize(){const b=stage.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=Math.max(1,b.width);Hh=Math.max(1,b.height);cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr);cv.style.width=W+'px';cv.style.height=Hh+'px';draw()}
+function resize(){const b=stage.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=Math.max(1,b.width);Hh=Math.max(1,b.height);cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr);cv.style.width=W+'px';cv.style.height=Hh+'px';if(view.auto)fit();draw()}
 function fit(){
   const pts=[];P.rooms.forEach(r=>{pts.push([r.x,r.y],[r.x+r.w,r.y+r.h])});P.items.forEach(i=>pts.push([i.x,i.y]));
   if(!pts.length||W<10){view.s=50;view.ox=40;view.oy=40;return}
   const x0=Math.min(...pts.map(p=>p[0])),x1=Math.max(...pts.map(p=>p[0])),y0=Math.min(...pts.map(p=>p[1])),y1=Math.max(...pts.map(p=>p[1]));
-  const pad=56;view.s=clamp(Math.min((W-pad*2)/Math.max(1,x1-x0),(Hh-pad*2)/Math.max(1,y1-y0)),12,260);
+  const pad=Math.min(40,Math.max(16,Math.min(W,Hh)*.05));view.auto=true;view.s=clamp(Math.min((W-pad*2)/Math.max(1,x1-x0),(Hh-pad*2)/Math.max(1,y1-y0)),12,260);
   view.ox=(W-(x1-x0)*view.s)/2-x0*view.s;view.oy=(Hh-(y1-y0)*view.s)/2-y0*view.s;
 }
 const colOf=id=>{const c=R&&R.circuits.find(x=>x.id===id);return c?C.circ[c.ci%8]:C.ink};
@@ -787,7 +804,7 @@ cv.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)){if(e.pointerType!=='touch'&&T[tool]){hover={x:wx(e.offsetX),y:wy(e.offsetY)};draw()}return}
   ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
   const g=gest;if(!g)return;
-  if(g.k==='pinch'){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;view.s=clamp(g.s*d/g.d,10,400);view.ox=cx-g.wx*view.s;view.oy=cy-g.wy*view.s;draw();return}
+  if(g.k==='pinch'){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;view.auto=false;view.s=clamp(g.s*d/g.d,10,400);view.ox=cx-g.wx*view.s;view.oy=cy-g.wy*view.s;draw();return}
   const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
   if(g.k==='resize'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<4)return;
@@ -808,7 +825,7 @@ cv.addEventListener('pointermove',e=>{
     }
     R=compute(P);draw();renderDyn();return;
   }
-  if(g.k==='pan'){if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<(e.pointerType==='mouse'?5:10))return;g.moved=true;view.ox=g.ox+X-g.X;view.oy=g.oy+Y-g.Y;draw();return}
+  if(g.k==='pan'){if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<(e.pointerType==='mouse'?5:10))return;g.moved=true;view.auto=false;view.ox=g.ox+X-g.X;view.oy=g.oy+Y-g.Y;draw();return}
   if(g.k==='moveItem'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     if(!g.moved){snap();g.moved=true}
@@ -858,10 +875,11 @@ cv.addEventListener('pointerup',e=>up(e,false));
 cv.addEventListener('pointercancel',e=>up(e,true));
 cv.addEventListener('pointerleave',()=>{if(hover){hover=null;draw()}});
 cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*.0015))},{passive:false});
-function zoomAt(X,Y,k){const x=wx(X),y=wy(Y);view.s=clamp(view.s*k,10,400);view.ox=X-x*view.s;view.oy=Y-y*view.s;draw()}
+function zoomAt(X,Y,k){view.auto=false;const x=wx(X),y=wy(Y);view.s=clamp(view.s*k,10,400);view.ox=X-x*view.s;view.oy=Y-y*view.s;draw()}
 $('#zIn').onclick=()=>zoomAt(W/2,Hh/2,1.25);
 $('#zOut').onclick=()=>zoomAt(W/2,Hh/2,.8);
 $('#zFit').onclick=()=>{fit();draw()};
+$('#focusBtn').onclick=()=>{const on=document.body.classList.toggle('focus');$('#focusBtn').setAttribute('aria-pressed',on);$('#focusBtn .lbl').textContent=on?'Ieși din ecran mare':'Ecran mare';requestAnimationFrame(resize)};
 
 const ICON={
   select:'<path d="M8 5l15 10-6.5 1.5L20 24l-3 1.5-3.5-7.5L8 22z" fill="currentColor"/>',
@@ -959,15 +977,17 @@ function renderInspector(){
       <label class="ck full"><input type="checkbox" data-s="proj" data-f="spd" id="p-spd"${P.spd?' checked':''}> Descărcător de supratensiune în tablou</label>
     </div></div>`;
   }
-  insp.innerHTML=h;renderDyn();renderSelbar();
+  insp.innerHTML=`<button class="btn ic insp-x" type="button" data-x aria-label="Închide panoul">✕</button>`+h;insp.hidden=!inspOpen;stage.classList.toggle('io',inspOpen);renderDyn();renderSelbar();
 }
+let inspOpen=false;
+function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector()}
 function renderSelbar(){
   const el=$('#selbar');if(!el)return;
   if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
-  if(!sel){el.innerHTML='<span class="tag muted">Atinge o cameră, o ușă sau un element ca să-l editezi sau să-l ștergi.</span>';return}
+  if(!sel){el.innerHTML=`<span class="tag muted">Atinge un element ca să-l editezi</span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde':'Proiect și circuite'}</button>`;return}
   const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):sel.kind==='win'?P.wins.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
-  const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'Trage de cercuri și pătrate ca s-o redimensionezi. Trage din interior ca s-o muți.':'Trage ca să-l muți.';
-  el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">Închide</button>`;
+  const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'trage de mânere ca s-o redimensionezi':'trage ca să-l muți';
+  el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn" type="button" data-sb="info">${inspOpen?'Ascunde detalii':'Detalii'}</button><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">✕</button>`;
 }
 function renderDyn(){
   const el=$('#insDyn');if(!el)return;
@@ -1033,9 +1053,11 @@ $('#selbar').addEventListener('click',e=>{
   const b=e.target.closest('[data-sb]');if(!b)return;
   if(b.dataset.sb==='del')deleteSel();
   else if(b.dataset.sb==='done')setTool('select');
-  else{sel=null;renderInspector();draw()}
+  else if(b.dataset.sb==='info'||b.dataset.sb==='proj')setInsp(!inspOpen);
+  else{sel=null;setInsp(false);draw()}
 });
 insp.addEventListener('click',e=>{
+  if(e.target.closest('[data-x]')){setInsp(false);renderSelbar();return}
   const b=e.target.closest('[data-act]');if(!b||!sel)return;
   const act=b.dataset.act,d=sel.kind==='door'?P.doors.find(i=>i.id===sel.id):null;
   if(act!=='del'){
