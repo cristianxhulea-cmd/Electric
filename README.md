@@ -16,7 +16,7 @@ Aplicație web pentru proiectarea instalațiilor electrice rezidențiale, gândi
 - **Materiale**: cablu pe secțiuni, cu rezervă, tub de protecție, doze, cleme, aparataj, corpuri de iluminat, echiparea tabloului și manopera. Introduci prețurile unitare și obții totalul. Tabelul se copiază direct în Excel.
 - **Lucrări**: datele clientului, etape generate automat din proiect, cu ore estimate, panou De făcut / În lucru / Finalizat și progres.
 
-Proiectele se salvează în browser. Din „Salvare / import” le copiezi ca text JSON pentru backup sau ca să le muți pe alt dispozitiv.
+Deschisă din linkul Claude, aplicația salvează proiectele în contul tău, iar ele apar pe orice dispozitiv pe care deschizi linkul. Indicatorul din colțul de sus arată starea: „Salvat în cont”. Deschisă ca fișier (`index.html`), aplicația salvează doar în browserul respectiv. Din „Salvare / import” copiezi oricând proiectul ca text JSON, pentru backup.
 
 ## Fișiere
 

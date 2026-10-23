@@ -58,7 +58,13 @@ button{cursor:pointer}
 .tabs{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--bg);overflow-x:auto;max-width:100%}
 .tabs button{border:0;background:none;padding:6px 12px;border-radius:6px;font-weight:500;white-space:nowrap;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.acts{display:flex;gap:6px;margin-left:auto}
+.acts{display:flex;gap:6px;margin-left:auto;align-items:center}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync[data-s="ok"]{color:var(--ok)}
+.sync[data-s="ok"]::before{background:var(--ok)}
+.sync[data-s="bad"]{color:var(--bad)}
+.sync[data-s="bad"]::before{background:var(--bad)}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:13px;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -209,6 +215,7 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
     </nav>
     <div class="acts">
+      <span class="sync" id="sync" data-s="muted" role="status">Doar pe acest dispozitiv</span>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="btn ic" id="redoBtn" type="button" title="Refă (Ctrl+Y)" aria-label="Refă"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
       <button class="btn" id="ioBtn" type="button">Salvare / import</button>
@@ -244,7 +251,7 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
   <div class="dl">
     <div>
       <h2>Salvare și import</h2>
-      <p class="muted" style="margin:0">Proiectele se păstrează în acest browser. Copiază textul de mai jos ca să ai o copie de siguranță sau ca să-l muți pe alt dispozitiv.</p>
+      <p class="muted" style="margin:0">Când deschizi aplicația din linkul Claude, proiectele se salvează în contul tău și apar pe orice dispozitiv. Textul de mai jos e o copie de siguranță a proiectului curent.</p>
     </div>
     <textarea id="ioText" aria-label="Proiect în format JSON"></textarea>
     <div class="bar">
@@ -376,7 +383,7 @@ function sample(){
   Wn('h',0,3.6,1.4,.9,1.2);Wn('h',0,6,1.2,.9,1.2);Wn('h',7.2,1.65,.9,.9,1.2);Wn('v',8.6,6.4,.6,1.4,.6);
   const res=compute(p);p.tasks=genTasks(p,res);
   p.tasks.forEach((t,i)=>{t.s=i<2?'done':i<4?'doing':'todo'});
-  p.prices={};
+  p.prices={};p.sample=true;
   return p;
 }
 
@@ -388,7 +395,57 @@ let P=store.projects.find(x=>x.id===store.current)||store.projects[0];
 let R=null,tool='select',sel=null,undoS=[],redoS=[],tab='plan',editTask=null,hover=null;
 const layers={routes:true,tags:true,dims:true};
 const view={s:60,ox:40,oy:40};
-function save(){clearTimeout(save.t);save.t=setTimeout(()=>{try{store.current=P.id;localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}},300)}
+const cloud={db:null,col:null,seen:false,busy:false,queue:new Set(),last:{}};
+const pbody=p=>{const{updated,...rest}=p;return JSON.stringify(rest)};
+const markSaved=p=>{cloud.last[p.id]=pbody(p)};
+store.projects.forEach(markSaved);
+function persist(){try{store.current=P.id;localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
+function setSync(k){const M={local:['Doar pe acest dispozitiv','muted'],conn:['Se conectează…','muted'],ok:['Salvat în cont','ok'],save:['Se salvează…','muted'],err:['Nesalvat în cont','bad'],ro:['Doar citire','muted'],full:['Spațiu plin în cont','bad']};const el=$('#sync');if(el){el.textContent=M[k][0];el.dataset.s=M[k][1]}}
+function save(){clearTimeout(save.t);save.t=setTimeout(()=>{const b=pbody(P);if(cloud.last[P.id]!==b){P.updated=Date.now();P.sample=false;cloud.last[P.id]=b;queuePush(P.id)}persist()},300)}
+function queuePush(id){if(!cloud.col)return;cloud.queue.add(id);flush()}
+async function flush(){
+  if(cloud.busy)return;cloud.busy=true;setSync('save');let fails=0;
+  while(cloud.queue.size){
+    const id=cloud.queue.values().next().value;cloud.queue.delete(id);
+    const p=store.projects.find(x=>x.id===id);
+    try{if(p)await cloud.col.doc(id).set({p:JSON.parse(JSON.stringify(p)),updated:p.updated||0,name:p.name});else await cloud.col.doc(id).delete();fails=0}
+    catch(e){
+      const c=e&&e.code;
+      if(c==='invalid_argument'||c==='not_granted'||c==='revoked'){cloud.busy=false;setSync('ro');return}
+      if(c==='quota_exceeded'){cloud.busy=false;setSync('full');toast('Spațiul din cont s-a umplut. Șterge proiecte vechi.');return}
+      if(++fails>3){cloud.queue.add(id);cloud.busy=false;setSync('err');return}
+      cloud.queue.add(id);await new Promise(r=>setTimeout(r,2000*fails+Math.random()*1000));
+    }
+  }
+  cloud.busy=false;setSync('ok');
+}
+function onRemote(snap){
+  const first=!cloud.seen;cloud.seen=true;let cur=false;
+  const remote=new Map(snap.docs.map(d=>[d.id,d.data()]).filter(([,r])=>r&&r.p));
+  if(first){
+    if(remote.size)store.projects=store.projects.filter(p=>!p.sample||remote.has(p.id));
+    for(const p of store.projects){if(p.sample)continue;const r=remote.get(p.id);if(!r||(p.updated||0)>(r.updated||0))queuePush(p.id)}
+  }else for(const c of snap.docChanges())if(c.type==='removed'&&!snap.docs.some(d=>d.id===c.doc.id)){store.projects=store.projects.filter(p=>p.id!==c.doc.id);delete cloud.last[c.doc.id]}
+  for(const[id,r]of remote){
+    const i=store.projects.findIndex(x=>x.id===id),q=norm(JSON.parse(JSON.stringify(r.p)));
+    if(i<0){store.projects.push(q);markSaved(q);continue}
+    if((r.updated||0)>(store.projects[i].updated||0)){if(store.projects[i]===P)cur=true;store.projects[i]=q;markSaved(q)}
+  }
+  if(!store.projects.length){const b=blank('Proiect 1');store.projects.push(b)}
+  const keep=store.projects.find(x=>x.id===P.id);
+  if(!keep){P=store.projects.find(x=>x.id===store.current)||store.projects[0];cur=true}else if(cur)P=keep;
+  persist();renderProjSel();
+  if(cur){undoS=[];redoS=[];sel=null;editTask=null;R=compute(P);fit();changed(true)}
+  if(!cloud.busy&&!cloud.queue.size)setSync('ok');
+}
+async function connectCloud(){
+  if(!window.claude||typeof window.claude.use!=='function'){setSync('local');return}
+  setSync('conn');let db=null;
+  try{db=await window.claude.use('db')}catch(e){}
+  if(!db){setSync('local');return}
+  cloud.db=db;cloud.col=db.collection('proiecte');
+  cloud.col.onSnapshot(onRemote,()=>{cloud.col=null;setSync('err')});
+}
 function snap(){undoS.push(JSON.stringify(P));if(undoS.length>80)undoS.shift();redoS=[]}
 function replaceP(q){const i=store.projects.findIndex(x=>x.id===P.id);store.projects[i]=q;P=q}
 function undo(){if(!undoS.length)return;redoS.push(JSON.stringify(P));replaceP(JSON.parse(undoS.pop()));sel=null;changed(true)}
@@ -1143,7 +1200,7 @@ $('#ioImport').onclick=()=>importText($('#ioText').value);
 $('#ioFile').onchange=e=>{const fl=e.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>importText(String(rd.result));rd.readAsText(fl);e.target.value=''};
 $('#ioDel').onclick=e=>{
   const b=e.currentTarget;if(!b.dataset.c){b.dataset.c='1';b.textContent='Apasă din nou pentru a șterge definitiv';return}
-  store.projects=store.projects.filter(x=>x.id!==P.id);if(!store.projects.length)store.projects.push(blank('Proiect 1'));
+  const gone=P.id;store.projects=store.projects.filter(x=>x.id!==gone);delete cloud.last[gone];queuePush(gone);if(!store.projects.length)store.projects.push(blank('Proiect 1'));
   dlg.close();openProject(store.projects[0]);toast('Proiect șters.');
 };
 
@@ -1172,6 +1229,7 @@ readColors();renderTools();renderLayers();renderProjSel();
 R=compute(P);
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
+connectCloud();
 const h0=(location.hash||'').slice(1);if(['calcul','materiale','lucrari'].includes(h0))showTab(h0);
 })();
 </script>
