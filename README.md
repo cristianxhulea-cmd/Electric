@@ -11,6 +11,12 @@ Aplicație web pentru proiectarea instalațiilor electrice rezidențiale, gândi
   - întrerupătorul stă pe partea clanței, nu în spatele ușii deschise; când îl pui lângă o ușă, se poziționează singur la 20 cm de toc;
   - fiecare cameră cu lumini are un întrerupător lângă o ușă, iar tabloul nu stă în spatele ușii.
 - **Ferestre**: le pui pe perete cu un tap, alegi lățimea, parapetul și înălțimea golului sau le marchezi ca uși de balcon. Aparatele de sub parapet sunt permise. Cele aflate în dreptul golului sau la mai puțin de 10 cm de toc sunt marcate cu roșu.
+- **Structură**: marchezi pereții de rezistență (trasezi de-a lungul peretelui) și grinzile (trasezi pe plan). Nu se taie și nu se găuresc fără acordul proiectantului de structură. Aplicația:
+  - nu pune doze de derivație pe pereții de rezistență;
+  - marchează aparatele de pe acești pereți și traseele care îi străpung sau merg în lungul lor;
+  - marchează cu ✕ roșu fiecare loc în care un traseu de sub tavan traversează o grindă.
+- **Doze**: dozele de derivație stau pe perete, în zona orizontală de sub tavan, ocolind golurile ușilor și ferestrelor și pereții de rezistență. Sunt numerotate D1, D2…; în „Circuite” găsești tabelul cu camera, peretele, distanța de la colț și înălțimea fiecăreia.
+- **Trasee separate**: din lista de jos, din legenda circuitelor sau cu „Vezi traseul” alegi un circuit și vezi doar traseul lui, cu lungimea fiecărei porțiuni.
 - **Trasee automate**: de la tablou la doza de derivație din fiecare cameră, apoi la fiecare element, pe orizontală și verticală. Traseele orizontale trec la 30 cm sub tavan sau prin pardoseală.
 - **Circuite și tablou**: grupează circuitele (iluminat, prize, consumatori dedicați), alege siguranța, secțiunea cablului după curentul admisibil și căderea de tensiune (3 % la iluminat, 5 % în rest, I7-2011), diferențialele de 30 mA, disjunctorul general și dimensiunea tabloului.
 - **Materiale**: cablu pe secțiuni, cu rezervă, tub de protecție, doze, cleme, aparataj, corpuri de iluminat, echiparea tabloului și manopera. Introduci prețurile unitare și obții totalul. Tabelul se copiază direct în Excel.
