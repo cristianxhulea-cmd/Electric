@@ -17,6 +17,8 @@ Aplicație web pentru proiectarea instalațiilor electrice rezidențiale, gândi
   - marchează cu ✕ roșu fiecare loc în care un traseu de sub tavan traversează o grindă.
 - **Doze**: dozele de derivație stau pe perete, în zona orizontală de sub tavan, ocolind golurile ușilor și ferestrelor și pereții de rezistență. Sunt numerotate D1, D2…; în „Circuite” găsești tabelul cu camera, peretele, distanța de la colț și înălțimea fiecăreia.
 - **Trasee separate**: din lista de jos, din legenda circuitelor sau cu „Vezi traseul” alegi un circuit și vezi doar traseul lui, cu lungimea fiecărei porțiuni.
+- **Trasee editabile**: atingi un traseu și tragi de oricare porțiune ca s-o muți; dozele de derivație le tragi pe alt perete al camerei. „Traseu automat” sau „Poziție automată” anulează modificarea.
+- **Baia**: are circuite dedicate pentru iluminat, prize și consumatori, toate protejate cu diferențial de 30 mA. Traseele altor camere nu intră în baie și nu merg prin pereții ei. Ocolesc automat, iar dacă un traseu desenat manual trece prin baie, este marcat.
 - **Trasee automate**: de la tablou la doza de derivație din fiecare cameră, apoi la fiecare element, pe orizontală și verticală. Traseele orizontale trec la 30 cm sub tavan sau prin pardoseală.
 - **Circuite și tablou**: grupează circuitele (iluminat, prize, consumatori dedicați), alege siguranța, secțiunea cablului după curentul admisibil și căderea de tensiune (3 % la iluminat, 5 % în rest, I7-2011), diferențialele de 30 mA, disjunctorul general și dimensiunea tabloului.
 - **Materiale**: cablu pe secțiuni, cu rezervă, tub de protecție, doze, cleme, aparataj, corpuri de iluminat, echiparea tabloului și manopera. Introduci prețurile unitare și obții totalul. Tabelul se copiază direct în Excel.

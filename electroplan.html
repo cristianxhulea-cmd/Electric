@@ -341,7 +341,43 @@ function switchSpot(p,d,room){
   for(const t of swing?[hand]:[hand,hing])if(t>=lo+.1&&t<=hi-.1)return dPt(d,Math.round(t*100)/100,0);
   return null;
 }
-function boxSpot(p,r,from,z,used){
+function cleanPts(pts){
+  const o=[];for(const q of pts){const l=o[o.length-1];if(l&&Math.abs(l.x-q.x)<1e-6&&Math.abs(l.y-q.y)<1e-6)continue;o.push({x:q.x,y:q.y})}
+  for(let i=1;i<o.length-1;){const a=o[i-1],b=o[i],c=o[i+1];if((Math.abs(a.x-b.x)<1e-6&&Math.abs(b.x-c.x)<1e-6)||(Math.abs(a.y-b.y)<1e-6&&Math.abs(b.y-c.y)<1e-6))o.splice(i,1);else i++}
+  return o;
+}
+function legsOf(pts){const o=[pts[0]];for(let i=1;i<pts.length;i++){const a=o[o.length-1],b=pts[i];if(Math.abs(a.x-b.x)>1e-6&&Math.abs(a.y-b.y)>1e-6)o.push({x:b.x,y:a.y});o.push(b)}return cleanPts(o)}
+function crossRect(p1,p2,rc,e=.03){x1=Math.min(p1.x,p2.x),x2=Math.max(p1.x,p2.x),y1=Math.min(p1.y,p2.y),y2=Math.max(p1.y,p2.y);return x2>rc.x+e&&x1<rc.x+rc.w-e&&y2>rc.y+e&&y1<rc.y+rc.h-e}
+function pathOk(pts,F,e){for(let i=0;i+1<pts.length;i++)for(const rc of F)if(crossRect(pts[i],pts[i+1],rc,e))return false;return true}
+const pathLen=pts=>{let l=0;for(let i=0;i+1<pts.length;i++)l+=Math.abs(pts[i+1].x-pts[i].x)+Math.abs(pts[i+1].y-pts[i].y);return l};
+function routeAuto(a,b,F,rooms){
+  const c1=cleanPts([a,{x:b.x,y:a.y},b]);if(!F.length||pathOk(c1,F,-.1))return c1;
+  const c2=cleanPts([a,{x:a.x,y:b.y},b]);if(pathOk(c2,F,-.1))return c2;
+  const st=.1,xs=[a.x,b.x,...rooms.flatMap(r=>[r.x,r.x+r.w])],ys=[a.y,b.y,...rooms.flatMap(r=>[r.y,r.y+r.h])];
+  const x0=Math.floor(Math.min(...xs)/st)*st-.5,y0=Math.floor(Math.min(...ys)/st)*st-.5,nx=Math.ceil((Math.max(...xs)+.5-x0)/st)+1,ny=Math.ceil((Math.max(...ys)+.5-y0)/st)+1;
+  if(nx*ny>90000)return c1;
+  const inF=(x,y)=>(Math.abs(x-a.x)+Math.abs(y-a.y)>.16&&Math.abs(x-b.x)+Math.abs(y-b.y)>.16&&F.some(rc=>x>rc.x-.1&&x<rc.x+rc.w+.1&&y>rc.y-.1&&y<rc.y+rc.h+.1))||!rooms.some(r=>x>=r.x-.001&&x<=r.x+r.w+.001&&y>=r.y-.001&&y<=r.y+r.h+.001);
+  const blk=new Uint8Array(nx*ny);for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)if(inF(x0+i*st,y0+j*st))blk[j*nx+i]=1;
+  const gi=v=>clamp(Math.round((v.x-x0)/st),0,nx-1),gj=v=>clamp(Math.round((v.y-y0)/st),0,ny-1);
+  const si=gi(a),sj=gj(a),ti=gi(b),tj=gj(b);blk[sj*nx+si]=0;blk[tj*nx+ti]=0;
+  const D=[[1,0],[-1,0],[0,1],[0,-1]],N=nx*ny*4,dist=new Float64Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1);
+  const H=[];const push=(d,k)=>{H.push([d,k]);let i=H.length-1;while(i){const q=(i-1)>>1;if(H[q][0]<=H[i][0])break;[H[q],H[i]]=[H[i],H[q]];i=q}};
+  const pop=()=>{const t=H[0],l=H.pop();if(H.length){H[0]=l;let i=0;for(;;){const a2=2*i+1,b2=a2+1;let m=i;if(a2<H.length&&H[a2][0]<H[m][0])m=a2;if(b2<H.length&&H[b2][0]<H[m][0])m=b2;if(m===i)break;[H[m],H[i]]=[H[i],H[m]];i=m}}return t};
+  for(let d=0;d<4;d++){const k=(sj*nx+si)*4+d;dist[k]=0;push(0,k)}
+  let end=-1;
+  while(H.length){const[dd,k]=pop();if(dd>dist[k])continue;const c=k>>2,d=k&3,i=c%nx,j=(c/nx)|0;if(i===ti&&j===tj){end=k;break}
+    for(let nd=0;nd<4;nd++){const ni=i+D[nd][0],nj=j+D[nd][1];if(ni<0||nj<0||ni>=nx||nj>=ny||blk[nj*nx+ni])continue;const nk=(nj*nx+ni)*4+nd,w=dd+st+(nd!==d?.4:0);if(w<dist[nk]){dist[nk]=w;prev[nk]=k;push(w,nk)}}}
+  if(end<0)return null;
+  const g=[];for(let k=end;k>=0;k=prev[k]){const c=k>>2;g.push({x:Math.round((x0+(c%nx)*st)*100)/100,y:Math.round((y0+((c/nx)|0)*st)*100)/100})}
+  g.reverse();
+  return legsOf([a,...g,b]);
+}
+function boxAt(r,q,z){
+  const E=[{o:'h',c:r.y,lo:r.x,w:'sus'},{o:'h',c:r.y+r.h,lo:r.x,w:'jos'},{o:'v',c:r.x,lo:r.y,w:'stânga'},{o:'v',c:r.x+r.w,lo:r.y,w:'dreapta'}];
+  const e=E.find(e=>Math.abs((e.o==='h'?q.y:q.x)-e.c)<.02);
+  return{x:q.x,y:q.y,wall:e?e.w:'',dist:e?(e.o==='h'?q.x:q.y)-e.lo:0,z};
+}
+function boxSpot(p,r,from,z,used,F=[]){
   const E=[{o:'h',c:r.y,lo:r.x,hi:r.x+r.w,w:'sus'},{o:'h',c:r.y+r.h,lo:r.x,hi:r.x+r.w,w:'jos'},{o:'v',c:r.x,lo:r.y,hi:r.y+r.h,w:'stânga'},{o:'v',c:r.x+r.w,lo:r.y,hi:r.y+r.h,w:'dreapta'}];
   const on=(o,c)=>q=>q.o===o&&Math.abs(q.c-c)<.02;
   const bad=(e,t)=>{
@@ -349,6 +385,7 @@ function boxSpot(p,r,from,z,used){
     for(const d of p.doors.filter(on(e.o,e.c))){const[a,b]=dEnds(d);if(t>a-.15&&t<b+.15&&z<2.25)return true}
     for(const w of p.wins.filter(on(e.o,e.c))){const[a,b]=dEnds(w);if(t>a-.15&&t<b+.15&&z>w.sill-.15&&z<w.sill+w.hg+.15)return true}
     for(const st of(p.struct||[]).filter(x=>x.k==='rez'&&x.o===e.o&&Math.abs(x.c-e.c)<.02))if(t>=Math.min(st.a,st.b)-.05&&t<=Math.max(st.a,st.b)+.05)return true;
+    for(const rc of F){const pt=e.o==='h'?{x:t,y:e.c}:{x:e.c,y:t};if(pt.x>=rc.x-.05&&pt.x<=rc.x+rc.w+.05&&pt.y>=rc.y-.05&&pt.y<=rc.y+rc.h+.05)return true}
     for(const u of used)if(Math.abs((e.o==='h'?u.y:u.x)-e.c)<.02&&Math.abs((e.o==='h'?u.x:u.y)-t)<.22)return true;
     return false;
   };
@@ -374,8 +411,7 @@ function structChecks(p,out,z){
   const per={};
   const mark=(x,y,ci,kind)=>{out.hits.push({x,y,ci,kind});const k=ci+'|'+kind;per[k]=(per[k]||0)+1};
   for(const s of out.segs){
-    const A=s.a,M={x:s.b.x,y:s.a.y},B=s.b;
-    const pieces=[[A,M,'h'],[M,B,'v']];
+    const pieces=[];for(let k=0;k+1<s.pts.length;k++){const P1=s.pts[k],P2=s.pts[k+1];pieces.push([P1,P2,Math.abs(P1.y-P2.y)<1e-6?'h':'v'])}
     for(const[P1,P2,o]of pieces){
       const c=o==='h'?P1.y:P1.x,t1=Math.min(o==='h'?P1.x:P1.y,o==='h'?P2.x:P2.y),t2=Math.max(o==='h'?P1.x:P1.y,o==='h'?P2.x:P2.y);if(t2-t1<.01)continue;
       for(const w of rez){
@@ -424,8 +460,8 @@ function doorChecks(p,out){
 }
 const clampIn=(r,q,m)=>({x:clamp(q.x,r.x+m,r.x+r.w-m),y:clamp(q.y,r.y+m,r.y+r.h-m)});
 
-function blank(name){return{id:uid(),name:name||'Proiect nou',client:'',adresa:'',telefon:'',start:'',H:2.6,route:'tavan',cable:'CYY-F',reserve:10,maxPrize:8,maxLum:10,ks:.4,spd:true,swOff:.2,rooms:[],items:[],doors:[],wins:[],struct:[],tasks:[],prices:{}}}
-const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(!Array.isArray(p.wins))p.wins=[];if(!Array.isArray(p.struct))p.struct=[];if(p.swOff==null)p.swOff=.2;return p};
+function blank(name){return{id:uid(),name:name||'Proiect nou',client:'',adresa:'',telefon:'',start:'',H:2.6,route:'tavan',cable:'CYY-F',reserve:10,maxPrize:8,maxLum:10,ks:.4,spd:true,swOff:.2,rooms:[],items:[],doors:[],wins:[],struct:[],routes:{},boxes:{},tasks:[],prices:{}}}
+const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(!Array.isArray(p.wins))p.wins=[];if(!Array.isArray(p.struct))p.struct=[];if(!p.routes||typeof p.routes!=='object')p.routes={};if(!p.boxes||typeof p.boxes!=='object')p.boxes={};if(p.swOff==null)p.swOff=.2;return p};
 function sample(){
   const p=blank('Exemplu — apartament 3 camere');
   p.client='Exemplu (date fictive)';p.adresa='Str. Exemplu nr. 1, ap. 4';
@@ -535,6 +571,7 @@ function compute(p){
     const n=its.filter(i=>T[i.type].g==='lum').length;
     if(n&&!its.some(i=>T[i.type].g==='intr'))out.warn.push(`${r.name}: are corpuri de iluminat, dar niciun întrerupător.`);
     if(!n)out.warn.push(`${r.name}: are întrerupător, dar niciun corp de iluminat.`);
+    if(r.type==='baie'){lum.push({kind:'lum',parts:[{r,items:its}],n,bath:true});continue}
     if(cur&&cur.n+n>maxL)flush(lum);
     if(!cur)cur={kind:'lum',parts:[],n:0};
     cur.parts.push({r,items:its});cur.n+=n;
@@ -544,29 +581,34 @@ function compute(p){
   for(const r of rooms){
     const its=inRoom(r,['priza']);if(!its.length)continue;
     const wet=r.type==='bucatarie'||r.type==='baie';
-    if(wet)flush(pr);
     for(let k=0;k<its.length;k+=maxP){
       const ch=its.slice(k,k+maxP);
+      if(wet){pr.push({kind:'priza',parts:[{r,items:ch}],n:ch.length,bath:r.type==='baie'});continue}
       if(cur&&cur.n+ch.length>maxP)flush(pr);
       if(!cur)cur={kind:'priza',parts:[],n:0};
       cur.parts.push({r,items:ch});cur.n+=ch.length;
-      if(wet)flush(pr);
     }
   }
   flush(pr);
   const ded=[];
   for(const r of rooms)for(const it of inRoom(r,['ded']))ded.push({kind:'ded',parts:[{r,items:[it]}],n:1});
-  const used=[];
+  const used=[],baths=p.rooms.filter(r=>r.type==='baie');
   [...lum,...pr,...ded].forEach((s,k)=>{
     const id='C'+(k+1),ci=k;
-    let a={x:tb.x,y:tb.y},ah=tz,cum=0,len=0,Lmax=0;
-    const add=(fr,fh,to,th,feed)=>{const l=Math.abs(fh-z)+Math.abs(fr.x-to.x)+Math.abs(fr.y-to.y)+Math.abs(th-z);out.segs.push({a:{x:fr.x,y:fr.y},b:{x:to.x,y:to.y},ci,feed,l});len+=l;return l};
-    if(s.kind==='ded'){const it=s.parts[0].items[0];Lmax=add(a,ah,it,hOf(p,it),true)}
+    let a={x:tb.x,y:tb.y},ah=tz,cum=0,len=0,Lmax=0,pk='TE';
+    const F=baths.filter(r=>!s.parts.some(x=>x.r.id===r.id));
+    const add=(fr,fh,to,th,feed,key)=>{
+      const W=p.routes[key];let pts=W&&W.length?legsOf([fr,...W,to]):routeAuto(fr,to,F,p.rooms);
+      if(!pts){pts=cleanPts([fr,{x:to.x,y:fr.y},to]);out.warn.push(`${id}: nu am găsit un traseu care să ocolească baia. Trage traseul manual.`)}
+      if(F.length&&!pathOk(pts,F)){out.warn.push(`${id}: traseul trece prin baie. În baie intră doar circuitele care o alimentează. Mută traseul.`);for(let k=0;k+1<pts.length;k++)for(const rc of F)if(crossRect(pts[k],pts[k+1],rc))out.hits.push({x:(pts[k].x+pts[k+1].x)/2,y:(pts[k].y+pts[k+1].y)/2,ci,kind:'baie'})}
+      const l=Math.abs(fh-z)+pathLen(pts)+Math.abs(th-z);out.segs.push({a:{x:fr.x,y:fr.y},b:{x:to.x,y:to.y},pts,ci,feed,l,key,man:!!(W&&W.length)});len+=l;return l};
+    if(s.kind==='ded'){const it=s.parts[0].items[0];Lmax=add(a,ah,it,hOf(p,it),true,'TE>'+it.id)}
     else for(const part of s.parts){
-      const bx=boxSpot(p,part.r,a,z,used),d={x:bx.x,y:bx.y};used.push(d);cum+=add(a,ah,d,z,true);out.nodes.push({...bx,ci,cid:id,room:part.r.name});
+      const nk='n:'+part.r.id+':'+part.items[0].id,ov=p.boxes[nk];
+      const bx=ov?boxAt(part.r,ov,z):boxSpot(p,part.r,a,z,used,F),d={x:bx.x,y:bx.y};used.push(d);cum+=add(a,ah,d,z,true,pk+'>'+nk);out.nodes.push({...bx,ci,cid:id,room:part.r.name,key:nk,man:!!ov});
       if(bx.bad)out.warn.push(`${part.r.name}: nu am găsit un perete liber pentru doza de derivație a circuitului ${id}.`);
-      for(const it of part.items){const l=add(d,z,it,hOf(p,it),false);Lmax=Math.max(Lmax,cum+l)}
-      a=d;ah=z;
+      for(const it of part.items){const l=add(d,z,it,hOf(p,it),false,nk+'>'+it.id);Lmax=Math.max(Lmax,cum+l)}
+      a=d;ah=z;pk=nk;
     }
     const items=s.parts.flatMap(x=>x.items),t0=T[items[0].type];
     const P=items.reduce((t,i)=>t+wOf(i),0),cos=s.kind==='ded'?(t0.cos||1):1,Ib=P/(U*cos);
@@ -577,14 +619,14 @@ function compute(p){
     if(Ib>63)out.warn.push(`${id}: curentul de ${f(Ib)} A depășește 63 A. Folosește alimentare trifazică pentru acest consumator.`);
     if(du(S)>lim)out.warn.push(`${id}: căderea de tensiune rămâne peste ${lim} %. Mută tabloul mai aproape sau împarte circuitul.`);
     const curve=s.kind==='ded'?(t0.curve||'B'):'B';
-    const name=s.kind==='lum'?'Iluminat':s.kind==='priza'?'Prize':t0.n;
+    const name=s.kind==='lum'?(s.bath?'Iluminat baie':'Iluminat'):s.kind==='priza'?'Prize':t0.n;
     const where=[...new Set(s.parts.map(x=>x.r.name))].join(', ');
-    out.circuits.push({id,ci,kind:s.kind,name,where,items,n:items.length,P,Ib,In,curve,S,cable:`${p.cable} 3×${fS(S)}`,len,Lmax,du:du(S),lim,rcd:null,tube:S<=2.5?16:S<=4?20:25});
+    out.circuits.push({bath:!!s.bath||s.parts.every(x=>x.r.type==='baie'),id,ci,kind:s.kind,name,where,items,n:items.length,P,Ib,In,curve,S,cable:`${p.cable} 3×${fS(S)}`,len,Lmax,du:du(S),lim,rcd:null,tube:S<=2.5?16:S<=4?20:25});
     items.forEach(i=>out.by[i.id]=id);
   });
   out.nodes.forEach((n,i)=>n.id='D'+(i+1));
   structChecks(p,out,z);
-  const prot=out.circuits.filter(c=>c.kind!=='lum');
+  const prot=out.circuits.filter(c=>c.kind!=='lum'||c.bath);
   for(let k=0;k<prot.length;k+=4){const g=prot.slice(k,k+4),rid='ΔI'+(out.rcds.length+1);g.forEach(c=>c.rcd=rid);out.rcds.push({id:rid,circuits:g})}
   const Pi=out.circuits.reduce((t,c)=>t+c.P,0),ks=clamp(+p.ks||.4,.1,1),Pc=Pi*ks,Ic=Pc/U;
   const maxIn=out.circuits.reduce((m,c)=>Math.max(m,c.In),0);
@@ -711,8 +753,10 @@ function draw(){
       const o=((s.ci%5)-2)*.035,col=C.circ[s.ci%8];
       ctx.strokeStyle=col;ctx.lineWidth=s.feed?2.4:1.5;ctx.globalAlpha=s.feed?.95:.8;ctx.setLineDash(s.feed?[]:[6,4]);
       if(iso){ctx.lineWidth=s.feed?3.4:2.4;ctx.globalAlpha=1}
-      ctx.beginPath();ctx.moveTo(sx(s.a.x),sy(s.a.y));ctx.lineTo(sx(s.b.x+o),sy(s.a.y+o));ctx.lineTo(sx(s.b.x),sy(s.b.y));ctx.stroke();
-      if(iso&&s.l>.3){const hx=Math.abs(s.b.x-s.a.x)>Math.abs(s.b.y-s.a.y),mx=hx?(s.a.x+s.b.x)/2:s.b.x,my=hx?s.a.y:(s.a.y+s.b.y)/2,lb=f(s.l,1)+' m';ctx.font='600 11px "IBM Plex Mono",monospace';const tw=ctx.measureText(lb).width+8;ctx.globalAlpha=1;ctx.fillStyle=C.canvas;ctx.fillRect(sx(mx)-tw/2,sy(my)-8,tw,16);ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([]);ctx.strokeRect(sx(mx)-tw/2,sy(my)-8,tw,16);txt(lb,sx(mx),sy(my)+.5,11,600,col);ctx.setLineDash(s.feed?[]:[6,4])}
+      const sl=sel&&sel.kind==='seg'&&sel.key===s.key;if(sl){ctx.strokeStyle=C.sel;ctx.lineWidth=5;ctx.globalAlpha=.55;ctx.setLineDash([]);ctx.beginPath();s.pts.forEach((q,k)=>k?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke();ctx.strokeStyle=col;ctx.globalAlpha=1;ctx.lineWidth=2.6;ctx.setLineDash(s.feed?[]:[6,4])}
+      ctx.beginPath();s.pts.forEach((q,k)=>{const oo=k&&k<s.pts.length-1?o:0;k?ctx.lineTo(sx(q.x+oo),sy(q.y+oo)):ctx.moveTo(sx(q.x),sy(q.y))});ctx.stroke();
+      if(sl)for(let k=1;k<s.pts.length-1;k++){ctx.setLineDash([]);ctx.fillStyle=C.canvas;ctx.strokeStyle=C.sel;ctx.lineWidth=2;ctx.beginPath();ctx.arc(sx(s.pts[k].x),sy(s.pts[k].y),5,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle=col;ctx.setLineDash(s.feed?[]:[6,4])}
+      if((iso||sl)&&s.l>.3&&s.pts.length>1){let bi=0,bl=-1;for(let k=0;k+1<s.pts.length;k++){const L2=Math.abs(s.pts[k+1].x-s.pts[k].x)+Math.abs(s.pts[k+1].y-s.pts[k].y);if(L2>bl){bl=L2;bi=k}}const mx=(s.pts[bi].x+s.pts[bi+1].x)/2,my=(s.pts[bi].y+s.pts[bi+1].y)/2,lb=f(s.l,1)+' m';ctx.font='600 11px "IBM Plex Mono",monospace';const tw=ctx.measureText(lb).width+8;ctx.globalAlpha=1;ctx.fillStyle=C.canvas;ctx.fillRect(sx(mx)-tw/2,sy(my)-8,tw,16);ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([]);ctx.strokeRect(sx(mx)-tw/2,sy(my)-8,tw,16);txt(lb,sx(mx),sy(my)+.5,11,600,col);ctx.setLineDash(s.feed?[]:[6,4])}
     }
     ctx.setLineDash([]);ctx.globalAlpha=1;
   }
@@ -825,6 +869,12 @@ function hitStruct(X,Y){
     if(dd<bd){bd=dd;b=st}}
   return b;
 }
+function hitNode(X,Y){if(!R||!(layers.boxes||layers.routes||isoC()))return null;const iso=isoC();let b=null,bd=12;for(const n of R.nodes){if(iso&&n.ci!==iso.ci)continue;const d=Math.hypot(sx(n.x)-X,sy(n.y)-Y);if(d<bd){bd=d;b=n}}return b}
+function hitSeg(X,Y){
+  const iso=isoC();if(!R||!(layers.routes||iso))return null;let b=null,bd=9;
+  for(const s of R.segs){if(iso&&s.ci!==iso.ci)continue;for(let k=0;k+1<s.pts.length;k++){const A=s.pts[k],B=s.pts[k+1],ax=sx(A.x),ay=sy(A.y),bx=sx(B.x),by=sy(B.y),L=Math.hypot(bx-ax,by-ay)||1,u=clamp(((X-ax)*(bx-ax)+(Y-ay)*(by-ay))/(L*L),0,1),d=Math.hypot(X-ax-u*(bx-ax),Y-ay-u*(by-ay));if(d<bd){bd=d;b={s,k}}}}
+  return b;
+}
 function hitOpen(list,X,Y){
   let b=null,bd=14;
   for(const d of list){const[a,c]=dEnds(d),A=dPt(d,a,0),B=dPt(d,c,0),ax=sx(A.x),ay=sy(A.y),bx=sx(B.x),by=sy(B.y);
@@ -899,6 +949,8 @@ cv.addEventListener('pointerdown',e=>{
     if(dr){sel={kind:'door',id:dr.id};gest={k:'moveDoor',id:dr.id,X,Y,moved:false};renderInspector();draw();return}
     const stx=hitStruct(X,Y);
     const wn=hitOpen(P.wins,X,Y);
+    if(!wn&&!stx){const nd=hitNode(X,Y);if(nd){sel={kind:'node',key:nd.key};const rr=P.rooms.find(r=>'n:'+r.id+':'===nd.key.slice(0,r.id.length+3));gest={k:'node',key:nd.key,room:rr&&rr.id,X,Y,moved:false};renderInspector();draw();return}
+      const hs=hitSeg(X,Y);if(hs){sel={kind:'seg',key:hs.s.key};gest={k:'leg',key:hs.s.key,i:hs.k,base:hs.s.pts.map(q=>({...q})),o:Math.abs(hs.s.pts[hs.k].y-hs.s.pts[hs.k+1].y)<1e-6?'h':'v',X,Y,moved:false};renderInspector();draw();return}}
     if(!wn&&stx){sel={kind:'st',id:stx.id};gest={k:'pan',X,Y,ox:view.ox,oy:view.oy,moved:false,keep:true};renderInspector();draw();return}
     if(wn){sel={kind:'win',id:wn.id};gest={k:'moveWin',id:wn.id,X,Y,moved:false};renderInspector();draw();return}
     const r=hitRoom(x,y);
@@ -952,6 +1004,20 @@ cv.addEventListener('pointermove',e=>{
   }
   if(g.k==='room'){const q=snapRoomPt(x,y);g.x1=q.x;g.y1=q.y;draw();return}
   if(g.k==='st'){g.x=x;g.y=y;draw();return}
+  if(g.k==='leg'){
+    if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;if(!g.moved){snap();g.moved=true}
+    const b=g.base.map(q=>({...q})),n=b.length,v=r05(g.o==='h'?y:x),i=g.i;let pts;
+    const setc=q=>g.o==='h'?{x:q.x,y:v}:{x:v,y:q.y};
+    const A=i===0?[b[0],setc(b[0])]:[setc(b[i])],Bp=i+1===n-1?[setc(b[n-1]),b[n-1]]:[setc(b[i+1])];
+    pts=[...b.slice(0,i),...A,...Bp,...b.slice(i+2)];
+    P.routes[g.key]=pts.slice(1,-1);R=compute(P);draw();return;
+  }
+  if(g.k==='node'){
+    if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;if(!g.moved){snap();g.moved=true}
+    const r=P.rooms.find(q=>q.id===g.room);if(!r)return;
+    const c=[[Math.abs(y-r.y),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y}],[Math.abs(y-r.y-r.h),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y+r.h}],[Math.abs(x-r.x),{x:r.x,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}],[Math.abs(x-r.x-r.w),{x:r.x+r.w,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}]].sort((a,b)=>a[0]-b[0])[0][1];
+    P.boxes[g.key]=c;R=compute(P);draw();return;
+  }
   if(g.k==='moveWin'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     const w=P.wins.find(i=>i.id===g.id);if(!w)return;const q=placeWin(x,y,w);if(!q)return;
@@ -973,7 +1039,8 @@ function up(e,cancel){
   gest=null;if(cancel){if(g.moved)changed();else draw();return}
   if(g.k==='pan'){if(!g.moved&&!g.keep){sel=g.room?{kind:'room',id:g.room}:null;renderInspector();draw()}return}
   if(g.k==='st'){const q=stFrom(g);if(!q||Math.abs(q.b-q.a)<.2){draw();return}snap();q.id=uid();if(q.a>q.b)[q.a,q.b]=[q.b,q.a];P.struct.push(q);sel={kind:'st',id:q.id};changed(true);return}
-  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'){if(g.moved)changed(true);return}
+  if(g.k==='leg'&&g.moved&&P.routes[g.key]){const s0=R.segs.find(q=>q.key===g.key);if(s0)P.routes[g.key]=cleanPts(s0.pts).slice(1,-1)}
+  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'||g.k==='leg'||g.k==='node'){if(g.moved)changed(true);return}
   if(g.k==='room'){
     const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
     if(w>=.5&&h>=.5){snap();const r={id:uid(),name:'Cameră '+(P.rooms.length+1),type:'altul',x,y,w:+w.toFixed(2),h:+h.toFixed(2)};P.rooms.push(r);sel={kind:'room',id:r.id};changed(true)}else draw();
@@ -1106,6 +1173,13 @@ function renderSelbar(){
   const el=$('#selbar');if(!el)return;
   if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':tool==='rez'?'Atinge peretele de rezistență și trage de-a lungul lui':tool==='grinda'?'Trage pe plan de-a lungul grinzii':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
   if(!sel){el.innerHTML=`<span class="tag muted">Atinge un element ca să-l editezi</span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde':'Proiect și circuite'}</button>`;return}
+  if(sel.kind==='seg'||sel.kind==='node'){
+    const sg=sel.kind==='seg'?R.segs.find(q=>q.key===sel.key):null,nd=sel.kind==='node'?R.nodes.find(q=>q.key===sel.key):null;
+    if(!sg&&!nd){el.innerHTML='';return}
+    const c=R.circuits[(sg||nd).ci],man=sg?!!P.routes[sel.key]:!!P.boxes[sel.key];
+    el.innerHTML=`<span class="tag"><b>${sg?'Traseu '+c.id+' · '+f(sg.l,1)+' m':'Doza '+nd.id+' · '+esc(nd.room)}</b><span class="muted">${sg?'trage de o porțiune ca s-o muți':'trage ca s-o muți pe alt perete'}${man?' · modificat manual':''}</span></span>${man?`<button class="btn" type="button" data-sb="auto">${sg?'Traseu automat':'Poziție automată'}</button>`:''}<button class="btn" type="button" data-sb="close" aria-label="Deselectează">✕</button>`;
+    return;
+  }
   const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):sel.kind==='win'?P.wins.find(i=>i.id===sel.id):sel.kind==='st'?P.struct.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
   const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':sel.kind==='st'?(o.k==='rez'?'Perete de rezistență':'Grindă'):sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'trage de mânere ca s-o redimensionezi':sel.kind==='st'?'șterge-l și desenează-l din nou ca să-l schimbi':'trage ca să-l muți';
   el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn" type="button" data-sb="info">${inspOpen?'Ascunde detalii':'Detalii'}</button><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">✕</button>`;
@@ -1177,6 +1251,7 @@ $('#selbar').addEventListener('click',e=>{
   if(b.dataset.sb==='del')deleteSel();
   else if(b.dataset.sb==='done')setTool('select');
   else if(b.dataset.sb==='info'||b.dataset.sb==='proj')setInsp(!inspOpen);
+  else if(b.dataset.sb==='auto'&&sel){snap();if(sel.kind==='seg')delete P.routes[sel.key];else delete P.boxes[sel.key];changed(true)}
   else{sel=null;setInsp(false);renderInspector();draw()}
 });
 insp.addEventListener('click',e=>{
