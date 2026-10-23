@@ -282,8 +282,8 @@ const T={
   ded:{n:'Consumator dedicat',g:'ded',w:2000,h:.6,code:'D',conn:'racord'},
   tablou:{n:'Tablou electric',g:'tab',w:0,h:1.6,code:'TE'}
 };
-const TOOLS=[['Plan',['select','room','usa']],['Prize',['priza','priza2','prizaip']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou']]];
-const SHORT={select:'Selectează',room:'Cameră',usa:'Ușă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
+const TOOLS=[['Plan',['select','room','usa','geam']],['Prize',['priza','priza2','prizaip']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou']]];
+const SHORT={select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
 const RT={living:'Living',dormitor:'Dormitor',bucatarie:'Bucătărie',baie:'Baie',hol:'Hol',birou:'Birou',debara:'Debara',altul:'Altă cameră'};
 const ST={todo:'De făcut',doing:'În lucru',done:'Finalizat'};
 const KEY='electroplan.v1';
@@ -320,6 +320,19 @@ function switchSpot(p,d,room){
   for(const t of swing?[hand]:[hand,hing])if(t>=lo+.1&&t<=hi-.1)return dPt(d,Math.round(t*100)/100,0);
   return null;
 }
+function winChecks(p,out){
+  const ws=p.wins||[];let nf=0;
+  for(const w of ws){
+    const[a,b]=dEnds(w),lo=+w.sill||0,hi=lo+(+w.hg||0);
+    for(const it of p.items){
+      if(T[it.type].h==='ceil'||out.flag[it.id]||!onLine(w,it))continue;
+      const t=along(w,it),h=hOf(p,it);
+      if(t<=a-.1||t>=b+.1||h<lo-.1||h>hi+.1)continue;
+      out.flag[it.id]=t>a&&t<b&&h>=lo&&h<=hi?'Este în golul ferestrei. Mută-l pe perete, la cel puțin 10 cm de toc, sau sub parapet.':'Este la mai puțin de 10 cm de tocul ferestrei. Zona verticală de instalare de lângă toc începe la 10 cm.';nf++;
+    }
+  }
+  if(nf)out.warn.push(`${nf} element(e) sunt în golul unei ferestre sau prea aproape de toc. Sunt marcate cu roșu pe plan.`);
+}
 function doorChecks(p,out){
   const ds=p.doors||[];if(!ds.length)return;
   let nf=0;
@@ -342,8 +355,8 @@ function doorChecks(p,out){
 }
 const clampIn=(r,q,m)=>({x:clamp(q.x,r.x+m,r.x+r.w-m),y:clamp(q.y,r.y+m,r.y+r.h-m)});
 
-function blank(name){return{id:uid(),name:name||'Proiect nou',client:'',adresa:'',telefon:'',start:'',H:2.6,route:'tavan',cable:'CYY-F',reserve:10,maxPrize:8,maxLum:10,ks:.4,spd:true,swOff:.2,rooms:[],items:[],doors:[],tasks:[],prices:{}}}
-const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(p.swOff==null)p.swOff=.2;return p};
+function blank(name){return{id:uid(),name:name||'Proiect nou',client:'',adresa:'',telefon:'',start:'',H:2.6,route:'tavan',cable:'CYY-F',reserve:10,maxPrize:8,maxLum:10,ks:.4,spd:true,swOff:.2,rooms:[],items:[],doors:[],wins:[],tasks:[],prices:{}}}
+const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(!Array.isArray(p.wins))p.wins=[];if(p.swOff==null)p.swOff=.2;return p};
 function sample(){
   const p=blank('Exemplu — apartament 3 camere');
   p.client='Exemplu (date fictive)';p.adresa='Str. Exemplu nr. 1, ap. 4';
@@ -359,6 +372,8 @@ function sample(){
   I('lumina',bi,7.3,5.7);I('intr',bi,6,5.6);I('prizaip',bi,8.6,5.2);I('msr',bi,6.8,7.2);I('boiler',bi,8,7.2);
   const D=(o,c,t,w,hinge,sd,kind)=>p.doors.push({id:uid(),o,c,t,w,hinge,s:sd,kind});
   D('h',7.2,4,.9,0,-1,'ext');D('h',4.2,4.1,.8,1,-1,'int');D('h',4.2,5.5,.8,0,-1,'int');D('v',3.2,5,.8,0,-1,'int');D('v',6,5,.8,0,1,'int');
+  const Wn=(o,c,t,w,sill,hg)=>p.wins.push({id:uid(),o,c,t,w,sill,hg,kind:'geam'});
+  Wn('h',0,3.6,1.4,.9,1.2);Wn('h',0,6,1.2,.9,1.2);Wn('h',7.2,1.65,.9,.9,1.2);Wn('v',8.6,6.4,.6,1.4,.6);
   const res=compute(p);p.tasks=genTasks(p,res);
   p.tasks.forEach((t,i)=>{t.s=i<2?'done':i<4?'doing':'todo'});
   p.prices={};
@@ -382,6 +397,7 @@ function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(P));replaceP(J
 function compute(p){
   const out={circuits:[],segs:[],nodes:[],warn:[],by:{},rcds:[],tot:null,flag:{}};
   doorChecks(p,out);
+  winChecks(p,out);
   const tbs=p.items.filter(i=>i.type==='tablou');
   if(!p.rooms.length)out.warn.push('Desenează cel puțin o cameră.');
   if(!tbs.length){out.warn.push('Plasează tabloul electric pe plan ca să calculez traseele, circuitele și materialele.');return out}
@@ -562,6 +578,7 @@ function draw(){
     }
   }
   for(const d of P.doors)drawDoor(d,false,sel&&sel.kind==='door'&&sel.id===d.id);
+  for(const w of P.wins)drawWin(w,false,sel&&sel.kind==='win'&&sel.id===w.id);
   if(R&&layers.routes){
     ctx.lineCap='round';ctx.lineJoin='round';
     for(const s of R.segs){
@@ -591,8 +608,9 @@ function draw(){
     ctx.strokeStyle=C.accent;ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.strokeRect(sx(x),sy(y),w*view.s,h*view.s);ctx.setLineDash([]);
     txt(`${f(w,2)} × ${f(h,2)} m`,sx(x+w/2),sy(y+h/2),13,600,C.accent);
   }
-  const gh=gest&&gest.k==='place'?gest:(hover&&(T[tool]||tool==='usa')?{type:tool,x:hover.x,y:hover.y}:null);
+  const gh=gest&&gest.k==='place'?gest:(hover&&(T[tool]||tool==='usa'||tool==='geam')?{type:tool,x:hover.x,y:hover.y}:null);
   if(gh&&gh.type==='usa'){const q=placeDoor(gh.x,gh.y);if(q)drawDoor(q,true,false)}
+  else if(gh&&gh.type==='geam'){const q=placeWin(gh.x,gh.y);if(q)drawWin(q,true,false)}
   else if(gh){const q=placePt(gh.type,gh.x,gh.y);sym(gh.type,sx(q.x),sy(q.y),r0,C.accent,true)}
   $('#scaleLbl').textContent=`grilă ${f(step,step<1?1:0)} m · ${Math.round(view.s)} px/m`;
   $('#hint').hidden=P.rooms.length>0;
@@ -626,6 +644,25 @@ function hitHandle(X,Y){
   let b=null,bd=20;
   for(const[hx,hy]of HANDLES){const d=Math.hypot(sx(r.x+r.w*(hx+1)/2)-X,sy(r.y+r.h*(hy+1)/2)-Y);if(d<bd){bd=d;b={r,hx,hy}}}
   return b;
+}
+function hitOpen(list,X,Y){
+  let b=null,bd=14;
+  for(const d of list){const[a,c]=dEnds(d),A=dPt(d,a,0),B=dPt(d,c,0),ax=sx(A.x),ay=sy(A.y),bx=sx(B.x),by=sy(B.y);
+    const L=Math.hypot(bx-ax,by-ay)||1,u=clamp(((X-ax)*(bx-ax)+(Y-ay)*(by-ay))/(L*L),0,1),dd=Math.hypot(X-ax-u*(bx-ax),Y-ay-u*(by-ay));
+    if(dd<bd){bd=dd;b=d}}
+  return b;
+}
+function placeWin(x,y,keep){const q=placeDoor(x,y,{w:keep?keep.w:1.2,hinge:0});if(!q)return null;return{o:q.o,c:q.c,t:q.t,w:q.w,sill:keep?keep.sill:.9,hg:keep?keep.hg:1.2,kind:keep?keep.kind:'geam'}}
+function drawWin(w,ghost,selected){
+  const[a,b]=dEnds(w),lw=clamp(view.s*.1,2,7),nw=(lw/2+1)/view.s;
+  ctx.save();if(ghost)ctx.globalAlpha=.6;
+  if(!ghost){const P1=dPt(w,a,-nw),P2=dPt(w,b,nw);ctx.fillStyle=C.canvas;ctx.fillRect(Math.min(sx(P1.x),sx(P2.x)),Math.min(sy(P1.y),sy(P2.y)),Math.abs(sx(P2.x)-sx(P1.x))||1,Math.abs(sy(P2.y)-sy(P1.y))||1)}
+  const col=ghost?C.accent:selected?C.sel:C.ink;ctx.strokeStyle=col;ctx.lineCap='butt';
+  ctx.lineWidth=2;for(const t of[a,b]){const p1=dPt(w,t,-nw),p2=dPt(w,t,nw);ctx.beginPath();ctx.moveTo(sx(p1.x),sy(p1.y));ctx.lineTo(sx(p2.x),sy(p2.y));ctx.stroke()}
+  ctx.lineWidth=1.3;for(const n of w.kind==='balcon'?[-nw,nw]:[-nw,0,nw]){const p1=dPt(w,a,n),p2=dPt(w,b,n);ctx.beginPath();ctx.moveTo(sx(p1.x),sy(p1.y));ctx.lineTo(sx(p2.x),sy(p2.y));ctx.stroke()}
+  if(w.kind==='balcon'){ctx.setLineDash([4,3]);const p1=dPt(w,a,0),p2=dPt(w,b,0);ctx.beginPath();ctx.moveTo(sx(p1.x),sy(p1.y));ctx.lineTo(sx(p2.x),sy(p2.y));ctx.stroke();ctx.setLineDash([])}
+  if(selected){ctx.strokeStyle=C.sel;ctx.lineWidth=5;ctx.globalAlpha=.5;const p1=dPt(w,a,0),p2=dPt(w,b,0);ctx.beginPath();ctx.moveTo(sx(p1.x),sy(p1.y));ctx.lineTo(sx(p2.x),sy(p2.y));ctx.stroke()}
+  ctx.restore();
 }
 function hitDoor(X,Y){
   let b=null,bd=14;
@@ -675,11 +712,13 @@ cv.addEventListener('pointerdown',e=>{
   const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
   if(tool==='select'){
     const hd=hitHandle(X,Y);
-    if(hd){const r=hd.r;gest={k:'resize',id:r.id,hx:hd.hx,hy:hd.hy,o:{x:r.x,y:r.y,w:r.w,h:r.h},its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),dos:P.doors.map(d=>[d,d.c,d.t]),X,Y,moved:false};return}
+    if(hd){const r=hd.r;gest={k:'resize',id:r.id,hx:hd.hx,hy:hd.hy,o:{x:r.x,y:r.y,w:r.w,h:r.h},its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),dos:[...P.doors,...P.wins].map(d=>[d,d.c,d.t]),X,Y,moved:false};return}
     const it=hitItem(X,Y);
     if(it){sel={kind:'item',id:it.id};gest={k:'moveItem',id:it.id,X,Y,moved:false};renderInspector();draw();return}
     const dr=hitDoor(X,Y);
     if(dr){sel={kind:'door',id:dr.id};gest={k:'moveDoor',id:dr.id,X,Y,moved:false};renderInspector();draw();return}
+    const wn=hitOpen(P.wins,X,Y);
+    if(wn){sel={kind:'win',id:wn.id};gest={k:'moveWin',id:wn.id,X,Y,moved:false};renderInspector();draw();return}
     const r=hitRoom(x,y);
     if(r&&sel&&sel.kind==='room'&&sel.id===r.id){gest={k:'moveRoom',id:r.id,x0:x,y0:y,rx:r.x,ry:r.y,its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),X,Y,moved:false};return}
     gest={k:'pan',X,Y,ox:view.ox,oy:view.oy,moved:false,room:r?r.id:null};return;
@@ -728,6 +767,12 @@ cv.addEventListener('pointermove',e=>{
     R=compute(P);draw();return;
   }
   if(g.k==='room'){const q=snapRoomPt(x,y);g.x1=q.x;g.y1=q.y;draw();return}
+  if(g.k==='moveWin'){
+    if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
+    const w=P.wins.find(i=>i.id===g.id);if(!w)return;const q=placeWin(x,y,w);if(!q)return;
+    if(!g.moved){snap();g.moved=true}
+    w.o=q.o;w.c=q.c;w.t=q.t;R=compute(P);draw();return;
+  }
   if(g.k==='moveDoor'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     const d=P.doors.find(i=>i.id===g.id);if(!d)return;const q=placeDoor(x,y,d);if(!q)return;
@@ -742,12 +787,13 @@ function up(e,cancel){
   if(g.k==='pinch'){if(!ptrs.size)gest=null;return}
   gest=null;if(cancel){if(g.moved)changed();else draw();return}
   if(g.k==='pan'){if(!g.moved){sel=g.room?{kind:'room',id:g.room}:null;renderInspector();draw()}return}
-  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='resize'){if(g.moved)changed(true);return}
+  if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'){if(g.moved)changed(true);return}
   if(g.k==='room'){
     const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
     if(w>=.5&&h>=.5){snap();const r={id:uid(),name:'Cameră '+(P.rooms.length+1),type:'altul',x,y,w:+w.toFixed(2),h:+h.toFixed(2)};P.rooms.push(r);sel={kind:'room',id:r.id};changed(true)}else draw();
     return;
   }
+  if(g.k==='place'&&g.type==='geam'){const q=placeWin(g.x,g.y);if(!q){toast('Atinge un perete ca să pui fereastra.');draw();return}snap();q.id=uid();P.wins.push(q);sel={kind:'win',id:q.id};changed(true);return}
   if(g.k==='place'&&g.type==='usa'){const q=placeDoor(g.x,g.y);if(!q){toast('Atinge un perete ca să pui ușa.');draw();return}snap();q.id=uid();P.doors.push(q);sel={kind:'door',id:q.id};changed(true);return}
   if(g.k==='place'){const q=placePt(g.type,g.x,g.y);snap();const it={id:uid(),type:g.type,room:q.room,x:q.x,y:q.y};P.items.push(it);sel={kind:'item',id:it.id};changed(true)}
 }
@@ -762,6 +808,7 @@ $('#zFit').onclick=()=>{fit();draw()};
 
 const ICON={
   select:'<path d="M8 5l15 10-6.5 1.5L20 24l-3 1.5-3.5-7.5L8 22z" fill="currentColor"/>',
+  geam:'<path d="M3 16h6M23 16h6" stroke="currentColor" stroke-width="4"/><path d="M9 12v8M23 12v8" stroke="currentColor" stroke-width="2"/><path d="M9 13.5h14M9 16h14M9 18.5h14" stroke="currentColor" stroke-width="1.2"/>',
   usa:'<path d="M3 26h7M24 26h5" stroke="currentColor" stroke-width="3"/><path d="M10 26V12" stroke="currentColor" stroke-width="2.4"/><path d="M10 12a14 14 0 0 1 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.5 2"/>',
   room:'<rect x="5" y="7" width="22" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M5 3.5h22M5 2v3M27 2v3" stroke="currentColor" stroke-width="1.4"/>',
   tablou:'<rect x="4" y="10" width="24" height="12" fill="currentColor"/><text x="16" y="16.5" fill="var(--panel)" font-size="8" font-weight="700" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Mono,monospace">TE</text>'
@@ -803,6 +850,19 @@ function renderInspector(){
     </div>
     <div id="insDyn"></div>
     <div class="bar"><button class="btn dng" type="button" data-act="del">Șterge elementul</button></div>`;
+  }else if(sel&&sel.kind==='win'){
+    const w=P.wins.find(i=>i.id===sel.id);
+    if(!w){sel=null;return renderInspector()}
+    const q=doorRooms(P,{...w,s:1});
+    h=`<div class="ihead">${svgSym('geam')}<div><h2>${w.kind==='balcon'?'Ușă de balcon':'Fereastră'}</h2><p class="sub">${[q.sw,q.ot].filter(Boolean).map(r=>esc(r.name)).join(' · ')||'Perete'} · trage ca s-o muți pe perete</p></div></div>
+    <div class="fields">
+      <label class="f">Lățime gol (m)<select data-s="win" data-f="w" id="w-w">${[.6,.8,.9,1,1.2,1.4,1.5,1.8,2,2.4].map(v=>`<option value="${v}"${v===w.w?' selected':''}>${f(v,2)}</option>`).join('')}</select></label>
+      <label class="f">Tip<select data-s="win" data-f="kind" id="w-kind">${opt({geam:'Fereastră',balcon:'Ușă de balcon'},w.kind)}</select></label>
+      <label class="f">Parapet (m)<input data-s="win" data-f="sill" id="w-sill" type="number" inputmode="decimal" min="0" max="2" step=".05" value="${w.sill}"></label>
+      <label class="f">Înălțime gol (m)<input data-s="win" data-f="hg" id="w-hg" type="number" inputmode="decimal" min=".3" max="3" step=".05" value="${w.hg}"></label>
+    </div>
+    <div id="insDyn"></div>
+    <div class="bar"><button class="btn dng" type="button" data-act="del">Șterge fereastra</button></div>`;
   }else if(sel&&sel.kind==='door'){
     const d=P.doors.find(i=>i.id===sel.id);
     if(!d){sel=null;return renderInspector()}
@@ -846,10 +906,10 @@ function renderInspector(){
 }
 function renderSelbar(){
   const el=$('#selbar');if(!el)return;
-  if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
+  if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
   if(!sel){el.innerHTML='<span class="tag muted">Atinge o cameră, o ușă sau un element ca să-l editezi sau să-l ștergi.</span>';return}
-  const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
-  const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':o.name,help=sel.kind==='room'?'Trage de cercuri și pătrate ca s-o redimensionezi. Trage din interior ca s-o muți.':'Trage ca să-l muți.';
+  const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):sel.kind==='win'?P.wins.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
+  const name=sel.kind==='item'?T[o.type].n:sel.kind==='door'?'Ușă':sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'Trage de cercuri și pătrate ca s-o redimensionezi. Trage din interior ca s-o muți.':'Trage ca să-l muți.';
   el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">Închide</button>`;
 }
 function renderDyn(){
@@ -859,6 +919,12 @@ function renderDyn(){
     if(it.type==='tablou'){const t=R.tot;el.innerHTML=t&&R.circuits.length?`<dl class="spec"><dt>Circuite</dt><dd>${R.circuits.length}</dd><dt>Diferențiale</dt><dd>${R.rcds.length}</dd><dt>Disjunctor general</dt><dd>${t.main?'C'+t.main:'—'}</dd><dt>Carcasă</dt><dd>${t.panel} module</dd></dl>`:'';return}
     const c=R.circuits.find(x=>x.id===R.by[it.id]),fl=R.flag[it.id]?`<div class="flagmsg">${esc(R.flag[it.id])}</div>`:'';
     el.innerHTML=fl+(c?`<dl class="spec"><dt>Circuit</dt><dd><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></dd><dt>Protecție</dt><dd>${c.curve}${c.In} A${c.rcd?' · '+c.rcd:''}</dd><dt>Cablu</dt><dd>${esc(c.cable)}</dd><dt>Lungime circuit</dt><dd>${f(c.len)} m</dd><dt>Cădere tensiune</dt><dd>${f(c.du,2)} %</dd></dl>`:'<p class="muted" style="margin:0">Elementul nu e încă pe niciun circuit. Pune-l într-o cameră și plasează tabloul.</p>');
+    return;
+  }
+  if(sel&&sel.kind==='win'){
+    const w=P.wins.find(i=>i.id===sel.id);if(!w){el.innerHTML='';return}
+    const fl=P.items.filter(i=>R.flag[i.id]&&onLine(w,i)&&Math.abs(along(w,i)-w.t)<w.w/2+.15);
+    el.innerHTML=`<div><h4>Verificare I7 la fereastră</h4><ul class="dchk"><li><span>Gol între ${f(w.sill,2)} m și ${f(w.sill+w.hg,2)} m de la pardoseală. Aparatele de sub parapet sunt permise; în dreptul golului și la mai puțin de 10 cm de toc, nu.</span></li>${fl.length?fl.map(i=>`<li class="no">${esc(T[i.type].n)}: ${esc(R.flag[i.id])}</li>`).join(''):'<li class="ok">Niciun aparat în golul ferestrei sau lângă toc.</li>'}</ul></div>`;
     return;
   }
   if(sel&&sel.kind==='door'){
@@ -883,9 +949,14 @@ insp.addEventListener('focusin',e=>{if(e.target.dataset.f&&!insp._s){snap();insp
 insp.addEventListener('focusout',()=>{insp._s=false});
 insp.addEventListener('input',e=>{
   const el=e.target,k=el.dataset.f,sc=el.dataset.s;if(!k)return;
-  const o=sc==='item'?P.items.find(i=>i.id===sel.id):sc==='room'?P.rooms.find(i=>i.id===sel.id):sc==='door'?P.doors.find(i=>i.id===sel.id):P;if(!o)return;
+  const o=sc==='item'?P.items.find(i=>i.id===sel.id):sc==='room'?P.rooms.find(i=>i.id===sel.id):sc==='door'?P.doors.find(i=>i.id===sel.id):sc==='win'?P.wins.find(i=>i.id===sel.id):P;if(!o)return;
   let v=el.type==='checkbox'?el.checked:el.value;
   if(sc==='door'){if(k==='w')v=parseFloat(v);o[k]=v;changed(true);return}
+  if(sc==='win'){
+    if(k==='kind'){o.kind=v;if(v==='balcon'){o.sill=0;o.hg=2.1}else if(!o.sill){o.sill=.9;o.hg=1.2}changed(true);return}
+    v=parseFloat(v);if(!isFinite(v))return;if(k==='sill')v=clamp(v,0,2);if(k==='hg')v=clamp(v,.3,3);o[k]=v;
+    if(k==='w')changed(true);else changed();return;
+  }
   if(el.type==='number'){if(v===''){if(sc==='item')delete o[k];return}v=parseFloat(v);if(!isFinite(v))return;if(sc==='room')v=Math.max(.5,v);if(k==='H')v=clamp(v,2,5)}
   if(sc==='item'&&k==='label'&&!v){delete o[k]}else o[k]=v;
   if(sc==='room'&&k==='type'&&/^Cameră \d+$/.test(o.name)){o.name=RT[v];const n=$('#r-name');if(n)n.value=o.name}
@@ -897,6 +968,7 @@ function deleteSel(){
   if(!sel)return;const k=sel.kind;snap();
   if(k==='item')P.items=P.items.filter(i=>i.id!==sel.id);
   else if(k==='door')P.doors=P.doors.filter(i=>i.id!==sel.id);
+  else if(k==='win')P.wins=P.wins.filter(i=>i.id!==sel.id);
   else{P.items=P.items.filter(i=>i.room!==sel.id);P.rooms=P.rooms.filter(r=>r.id!==sel.id)}
   sel=null;changed(true);toast(k==='room'?'Camera a fost ștearsă. Apasă ↶ ca s-o recuperezi.':'Șters. Apasă ↶ ca să recuperezi.');
 }
@@ -947,7 +1019,7 @@ function renderCalc(){
     <div class="tbl"><table><thead><tr><th>Circuit</th><th>Destinație</th><th class="n">Puncte</th><th class="n">Pi (W)</th><th class="n">Ib (A)</th><th class="n">Protecție</th><th>Diferențial</th><th>Cablu</th><th class="n">Lungime (m)</th><th class="n">ΔU</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h2>Echiparea tabloului</h2>
     <div class="rail-box"><div class="rail">${rail}</div></div>
-    <p class="note">Secțiunile țin cont de curentul admisibil în tub și de căderea de tensiune maximă de 3 % la iluminat și 5 % la celelalte receptoare (I7-2011). Circuitele de prize și consumatori sunt protejate cu diferențial de 30 mA. Traseele orizontale stau în zona de instalare de sub tavan (15–45 cm), coborârile spre aparate sunt verticale, iar aparatele de lângă uși stau la 10–30 cm de toc, cu întrerupătorul pe partea clanței. Rezultatele sunt orientative: proiectul final se verifică și se semnează de un electrician autorizat ANRE.</p>
+    <p class="note">Secțiunile țin cont de curentul admisibil în tub și de căderea de tensiune maximă de 3 % la iluminat și 5 % la celelalte receptoare (I7-2011). Circuitele de prize și consumatori sunt protejate cu diferențial de 30 mA. Traseele orizontale stau în zona de instalare de sub tavan (15–45 cm), coborârile spre aparate sunt verticale, iar aparatele de lângă uși și ferestre stau la 10–30 cm de toc, cu întrerupătorul pe partea clanței. Sub parapetul ferestrei se pot monta aparate, în dreptul golului nu. Rezultatele sunt orientative: proiectul final se verifică și se semnează de un electrician autorizat ANRE.</p>
   </div>`;
 }
 
