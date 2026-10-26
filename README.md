@@ -6,6 +6,7 @@ Aplicație web pentru proiectarea instalațiilor electrice rezidențiale, gândi
 
 - **Plan**: desenezi camerele trăgând pe grilă, apoi plasezi tabloul, prizele, luminile, întrerupătoarele și consumatorii dedicați (mașină de spălat, aer condiționat, plită, cuptor, boiler). Elementele de perete se lipesc automat de cel mai apropiat perete.
 - **Editare**: cu „Selectează” atingi o cameră, o ușă sau un element. Bara de sus arată ce ai selectat, cu butoanele „Șterge” și „Închide”. Camerele se redimensionează trăgând de colțuri și de laturi, iar prizele și ușile de pe perete se mută odată cu el. Orice modificare se anulează cu ↶.
+- **Goluri și camere unite**: cu „Gol perete” ștergi o porțiune de perete, trăgând de-a lungul ei. Din Detalii, „Unește cu…” face dintr-un dreptunghi continuarea camerei vecine, de exemplu un hol în formă de L: peretele dintre ele dispare, numele, tipul și suprafața devin comune, iar elementele aparțin aceleiași camere. „Separă” anulează unirea.
 - **Uși**: le pui pe perete cu un tap, alegi lățimea, partea balamalelor și sensul de deschidere. Aplicația verifică regulile din I7 pentru zona de lângă uși:
   - niciun aparat în golul ușii sau la mai puțin de 10 cm de toc (zona verticală de instalare are 10–30 cm);
   - întrerupătorul stă pe partea clanței, nu în spatele ușii deschise; când îl pui lângă o ușă, se poziționează singur la 20 cm de toc;

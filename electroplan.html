@@ -305,10 +305,10 @@ const T={
   ded:{n:'Consumator dedicat',g:'ded',w:2000,h:.6,code:'D',conn:'racord'},
   tablou:{n:'Tablou electric',g:'tab',w:0,h:1.6,code:'TE'}
 };
-const TOOLS=[['Plan',['select','room','usa','geam']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou']]];
+const TOOLS=[['Plan',['select','room','usa','geam','gol']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou']]];
 const JB={s:{n:'Doză Ø80',cap:4,lbl:'Ø80 mm',k:5},m:{n:'Doză 100×100',cap:6,lbl:'100×100 mm',k:6},l:{n:'Doză 160×100',cap:10,lbl:'160×100 mm',k:8},xl:{n:'Doză 200×150',cap:16,lbl:'200×150 mm',k:10}};
 const JBT={dozaS:'s',dozaM:'m',dozaL:'l'};
-const SHORT={prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
+const SHORT={gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
 const RT={living:'Living',dormitor:'Dormitor',bucatarie:'Bucătărie',baie:'Baie',hol:'Hol',birou:'Birou',debara:'Debara',altul:'Altă cameră'};
 const ST={todo:'De făcut',doing:'În lucru',done:'Finalizat'};
 const KEY='electroplan.v1';
@@ -332,7 +332,15 @@ const dPt=(d,t,n)=>d.o==='h'?{x:t,y:d.c+n}:{x:d.c+n,y:t};
 const onLine=(d,it)=>Math.abs((d.o==='h'?it.y:it.x)-d.c)<.02;
 const along=(d,it)=>d.o==='h'?it.x:it.y;
 const roomAtPt=(p,q)=>p.rooms.find(r=>q.x>r.x+1e-6&&q.x<r.x+r.w-1e-6&&q.y>r.y+1e-6&&q.y<r.y+r.h-1e-6)||null;
-const doorRooms=(p,d)=>({sw:roomAtPt(p,dPt(d,d.t,d.s*.15)),ot:roomAtPt(p,dPt(d,d.t,-d.s*.15))});
+const rootOf=(p,r)=>r&&r.of?p.rooms.find(x=>x.id===r.of)||r:r;
+const doorRooms=(p,d)=>({sw:rootOf(p,roomAtPt(p,dPt(d,d.t,d.s*.15))),ot:rootOf(p,roomAtPt(p,dPt(d,d.t,-d.s*.15)))});
+function sharedSeg(a,b){
+  const ov=(l1,h1,l2,h2)=>[Math.max(l1,l2),Math.min(h1,h2)];
+  for(const[c1,c2]of[[a.x+a.w,b.x],[b.x+b.w,a.x]])if(Math.abs(c1-c2)<.02){const[lo,hi]=ov(a.y,a.y+a.h,b.y,b.y+b.h);if(hi-lo>=.3)return{o:'v',c:c1,a:lo,b:hi}}
+  for(const[c1,c2]of[[a.y+a.h,b.y],[b.y+b.h,a.y]])if(Math.abs(c1-c2)<.02){const[lo,hi]=ov(a.x,a.x+a.w,b.x,b.x+b.w);if(hi-lo>=.3)return{o:'h',c:c1,a:lo,b:hi}}
+  return null;
+}
+const onGol=(p,o,c,t)=>(p.struct||[]).some(x=>x.k==='gol'&&x.o===o&&Math.abs(x.c-c)<.02&&t>=Math.min(x.a,x.b)-.02&&t<=Math.max(x.a,x.b)+.02);
 const roomSpan=(r,d)=>d.o==='h'?[r.x,r.x+r.w]:[r.y,r.y+r.h];
 function behindLeaf(d,t){const[a,b]=dEnds(d);return d.hinge?(t>b&&t<b+d.w):(t<a&&t>a-d.w)}
 function switchOk(p,d,room){
@@ -392,7 +400,7 @@ function boxSpot(p,r,from,z,used,F=[]){
     if(t<e.lo+.15||t>e.hi-.15)return true;
     for(const d of p.doors.filter(on(e.o,e.c))){const[a,b]=dEnds(d);if(t>a-.15&&t<b+.15&&z<2.25)return true}
     for(const w of p.wins.filter(on(e.o,e.c))){const[a,b]=dEnds(w);if(t>a-.15&&t<b+.15&&z>w.sill-.15&&z<w.sill+w.hg+.15)return true}
-    for(const st of(p.struct||[]).filter(x=>x.k==='rez'&&x.o===e.o&&Math.abs(x.c-e.c)<.02))if(t>=Math.min(st.a,st.b)-.05&&t<=Math.max(st.a,st.b)+.05)return true;
+    for(const st of(p.struct||[]).filter(x=>(x.k==='rez'||x.k==='gol')&&x.o===e.o&&Math.abs(x.c-e.c)<.02))if(t>=Math.min(st.a,st.b)-.05&&t<=Math.max(st.a,st.b)+.05)return true;
     for(const rc of F){const pt=e.o==='h'?{x:t,y:e.c}:{x:e.c,y:t};if(pt.x>=rc.x-.05&&pt.x<=rc.x+rc.w+.05&&pt.y>=rc.y-.05&&pt.y<=rc.y+rc.h+.05)return true}
     for(const u of used)if(Math.abs((e.o==='h'?u.y:u.x)-e.c)<.02&&Math.abs((e.o==='h'?u.x:u.y)-t)<.22)return true;
     return false;
@@ -409,6 +417,7 @@ function boxSpot(p,r,from,z,used,F=[]){
 }
 function structChecks(p,out,z){
   const st=p.struct||[];if(!st.length)return;
+  for(const it of p.items){if(T[it.type].h==='ceil'||out.flag[it.id])continue;if(onGol(p,'h',it.y,it.x)||onGol(p,'v',it.x,it.y))out.flag[it.id]='Este într-un loc unde peretele lipsește. Mută-l pe un perete.'}
   const rez=st.filter(x=>x.k==='rez'),gr=st.filter(x=>x.k==='grinda'),lo=x=>Math.min(x.a,x.b),hi=x=>Math.max(x.a,x.b);
   let ni=0;
   for(const it of p.items){
@@ -460,8 +469,10 @@ function doorChecks(p,out){
   }
   if(nf)out.warn.push(`${nf} element(e) sunt prea aproape de uși sau în spatele lor. Sunt marcate cu roșu pe plan.`);
   for(const r of p.rooms){
+    if(r.of)continue;
     const mine=ds.filter(d=>{const q=doorRooms(p,d);return(q.sw&&q.sw.id===r.id)||(q.ot&&q.ot.id===r.id)});
-    if(!mine.length){out.warn.push(`${r.name}: nu are nicio ușă desenată.`);continue}
+    const grp=p.rooms.filter(x=>x.id===r.id||x.of===r.id),hasGol=(p.struct||[]).some(g=>g.k==='gol'&&grp.some(x=>{const e=g.o==='h'?[x.y,x.y+x.h]:[x.x,x.x+x.w],sp=g.o==='h'?[x.x,x.x+x.w]:[x.y,x.y+x.h];return e.some(c=>Math.abs(c-g.c)<.02)&&Math.max(g.a,g.b)>sp[0]&&Math.min(g.a,g.b)<sp[1]}));
+    if(!mine.length){if(!hasGol)out.warn.push(`${r.name}: nu are nicio ușă desenată.`);continue}
     const lum=p.items.some(i=>i.room===r.id&&T[i.type].g==='lum');
     if(lum&&!mine.some(d=>switchOk(p,d,r)))out.warn.push(`${r.name}: pune un întrerupător lângă ușă, pe partea clanței, la 10–30 cm de toc.`);
   }
@@ -757,15 +768,18 @@ function draw(){
   ctx.lineWidth=clamp(view.s*.1,2,7);ctx.strokeStyle=C.wall;ctx.lineJoin='miter';
   for(const r of P.rooms)ctx.strokeRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s);
   for(const r of P.rooms){
-        if(r.w*view.s>60){const lx=sx(r.x)+16,ly=sy(r.y)+(layers.dims&&view.s>=25?34:20);ctx.font=`600 ${clamp(view.s*.2,11,15)}px "IBM Plex Sans",system-ui,sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=C.ink;ctx.fillText(r.name,lx,ly);txt(f(r.w*r.h,1)+' m²',lx,ly+16,11,400,C.muted,'left')}
+    if(r.of)continue;
+    const area=P.rooms.filter(x=>x.id===r.id||x.of===r.id).reduce((t,x)=>t+x.w*x.h,0);
+        if(r.w*view.s>60){const lx=sx(r.x)+16,ly=sy(r.y)+(layers.dims&&view.s>=25?34:20);ctx.font=`600 ${clamp(view.s*.2,11,15)}px "IBM Plex Sans",system-ui,sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=C.ink;ctx.fillText(r.name,lx,ly);txt(f(area,1)+' m²',lx,ly+16,11,400,C.muted,'left')}
     if(layers.dims&&view.s>=25){
       txt(f(r.w,2)+' m',sx(r.x)+16,sy(r.y)+13,10.5,500,C.muted,'left');
       ctx.save();ctx.translate(sx(r.x)+12,sy(r.y+r.h/2));ctx.rotate(-Math.PI/2);txt(f(r.h,2)+' m',0,0,10.5,500,C.muted);ctx.restore();
     }
   }
+  for(const g of P.struct)if(g.k==='gol')drawStruct(g,false,sel&&sel.kind==='st'&&sel.id===g.id);
   for(const d of P.doors)drawDoor(d,false,sel&&sel.kind==='door'&&sel.id===d.id);
   for(const w of P.wins)drawWin(w,false,sel&&sel.kind==='win'&&sel.id===w.id);
-  for(const st of P.struct)drawStruct(st,false,sel&&sel.kind==='st'&&sel.id===st.id);
+  for(const st of P.struct)if(st.k!=='gol')drawStruct(st,false,sel&&sel.kind==='st'&&sel.id===st.id);
   const iso=isoC();
   if(R&&(layers.routes||iso)){
     ctx.lineCap='round';ctx.lineJoin='round';
@@ -856,7 +870,14 @@ function hatchPat(){const k=C.struct;if(hatch&&hatchKey===k)return hatch;const c
 function drawStruct(st,ghost,selected){
   const a=Math.min(st.a,st.b),b=Math.max(st.a,st.b),P1=st.o==='h'?{x:a,y:st.c}:{x:st.c,y:a},P2=st.o==='h'?{x:b,y:st.c}:{x:st.c,y:b};
   ctx.save();if(ghost)ctx.globalAlpha=.6;
-  if(st.k==='rez'){
+  if(st.k==='gol'){
+    const lw=clamp(view.s*.1,2,7),nw=(lw/2+1.5)/view.s,sh=(lw/2)/view.s,a2=a+sh,b2=b-sh;
+    if(!ghost)for(const k of[1,-1]){const Q1=st.o==='h'?{x:a2,y:st.c}:{x:st.c,y:a2},Q2=st.o==='h'?{x:b2,y:st.c+k*nw}:{x:st.c+k*nw,y:b2},mid=st.o==='h'?{x:(a+b)/2,y:st.c+k*.15}:{x:st.c+k*.15,y:(a+b)/2};
+      ctx.fillStyle=roomAtPt(P,mid)?C.room:C.canvas;ctx.fillRect(Math.min(sx(Q1.x),sx(Q2.x)),Math.min(sy(Q1.y),sy(Q2.y)),Math.abs(sx(Q2.x)-sx(Q1.x))||1,Math.abs(sy(Q2.y)-sy(Q1.y))||1)}
+    ctx.strokeStyle=ghost?C.accent:selected?C.sel:C.wall;ctx.lineWidth=2;
+    if(!st.auto||ghost||selected)for(const t of[a,b]){const p1=st.o==='h'?{x:t,y:st.c-nw}:{x:st.c-nw,y:t},p2=st.o==='h'?{x:t,y:st.c+nw}:{x:st.c+nw,y:t};ctx.beginPath();ctx.moveTo(sx(p1.x),sy(p1.y));ctx.lineTo(sx(p2.x),sy(p2.y));ctx.stroke()}
+    if(ghost||selected){ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(sx(P1.x),sy(P1.y));ctx.lineTo(sx(P2.x),sy(P2.y));ctx.stroke();ctx.setLineDash([])}
+  }else if(st.k==='rez'){
     const th=clamp(view.s*.1,2,7)+8,X1=sx(P1.x),Y1=sy(P1.y),X2=sx(P2.x),Y2=sy(P2.y);
     const rx=st.o==='h'?X1:X1-th/2,ry=st.o==='h'?Y1-th/2:Y1,rw=st.o==='h'?X2-X1:th,rh=st.o==='h'?th:Y2-Y1;
     ctx.fillStyle=C.canvas;ctx.fillRect(rx,ry,rw,rh);ctx.fillStyle=hatchPat();ctx.fillRect(rx,ry,rw,rh);ctx.strokeStyle=selected?C.sel:C.struct;ctx.lineWidth=selected?3:2;ctx.strokeRect(rx,ry,rw,rh);
@@ -869,7 +890,7 @@ function drawStruct(st,ghost,selected){
 }
 function stFrom(g){
   if(g.k!=='st')return null;
-  if(g.type==='rez'){const e=g.edge;if(!e)return null;const t0=g.t0,t1=clamp(r05(e.o==='h'?g.x:g.y),e.lo,e.hi);if(Math.abs(t1-t0)<.1)return{k:'rez',o:e.o,c:e.c,a:t0,b:t0+.1};return{k:'rez',o:e.o,c:e.c,a:t0,b:t1}}
+  if(g.type==='rez'||g.type==='gol'){const e=g.edge;if(!e)return null;const t0=g.t0,t1=clamp(r05(e.o==='h'?g.x:g.y),e.lo,e.hi);if(Math.abs(t1-t0)<.1)return{k:g.type,o:e.o,c:e.c,a:t0,b:t0+.1};return{k:g.type,o:e.o,c:e.c,a:t0,b:t1}}
   const dx=g.x-g.x0,dy=g.y-g.y0,o=Math.abs(dx)>=Math.abs(dy)?'h':'v';
   return{k:'grinda',o,c:o==='h'?r05(g.y0):r05(g.x0),a:o==='h'?r05(g.x0):r05(g.y0),b:o==='h'?r05(g.x):r05(g.y),w:.25};
 }
@@ -900,7 +921,7 @@ function hitStruct(X,Y){
 function jbPt(x,y){
   const r=hitRoom(x,y);if(!r)return null;
   const c=[[Math.abs(y-r.y),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y}],[Math.abs(y-r.y-r.h),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y+r.h}],[Math.abs(x-r.x),{x:r.x,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}],[Math.abs(x-r.x-r.w),{x:r.x+r.w,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}]].sort((a,b)=>a[0]-b[0])[0][1];
-  return{...c,room:r.id};
+  return{...c,room:r.of||r.id};
 }
 function hitJb(X,Y){let b=null,bd=14;for(const j of P.jb){const d=Math.hypot(sx(j.x)-X,sy(j.y)-Y);if(d<bd){bd=d;b=j}}return b}
 function hitNode(X,Y){if(!R||!(layers.boxes||layers.routes||isoC()))return null;const iso=isoC();let b=null,bd=12;for(const n of R.nodes){if(iso&&n.ci!==iso.ci)continue;const d=Math.hypot(sx(n.x)-X,sy(n.y)-Y);if(d<bd){bd=d;b=n}}return b}
@@ -965,7 +986,7 @@ function placePt(type,x,y){
       const sp=switchSpot(P,d,r);if(sp){X=sp.x;Y=sp.y;break}
     }
   }
-  return{x:X,y:Y,room:r?r.id:null};
+  return{x:X,y:Y,room:r?(r.of||r.id):null};
 }
 
 const ptrs=new Map();let gest=null;
@@ -990,10 +1011,10 @@ cv.addEventListener('pointerdown',e=>{
     if(!wn&&stx){sel={kind:'st',id:stx.id};gest={k:'pan',X,Y,ox:view.ox,oy:view.oy,moved:false,keep:true};renderInspector();draw();return}
     if(wn){sel={kind:'win',id:wn.id};gest={k:'moveWin',id:wn.id,X,Y,moved:false};renderInspector();draw();return}
     const r=hitRoom(x,y);
-    if(r&&sel&&sel.kind==='room'&&sel.id===r.id){gest={k:'moveRoom',id:r.id,x0:x,y0:y,rx:r.x,ry:r.y,its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),X,Y,moved:false};return}
+    if(r&&sel&&sel.kind==='room'&&sel.id===r.id){gest={k:'moveRoom',id:r.id,x0:x,y0:y,rx:r.x,ry:r.y,kids:P.rooms.filter(k=>k.of===r.id).map(k=>[k,k.x,k.y]),gols:P.struct.filter(g=>g.auto&&(g.of===r.id||P.rooms.some(k=>k.of===r.id&&k.id===g.of))).map(g=>[g,g.c,g.a,g.b]),its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),X,Y,moved:false};return}
     gest={k:'pan',X,Y,ox:view.ox,oy:view.oy,moved:false,room:r?r.id:null};return;
   }
-  if(tool==='rez'){const e=nearEdge(x,y);if(!e){toast('Atinge un perete și trage de-a lungul lui.');return}gest={k:'st',type:'rez',edge:e,t0:clamp(r05(e.o==='h'?x:y),e.lo,e.hi),x,y};draw();return}
+  if(tool==='rez'||tool==='gol'){const e=nearEdge(x,y);if(!e){toast('Atinge un perete și trage de-a lungul lui.');return}gest={k:'st',type:tool,edge:e,t0:clamp(r05(e.o==='h'?x:y),e.lo,e.hi),x,y};draw();return}
   if(tool==='grinda'){gest={k:'st',type:'grinda',x0:x,y0:y,x,y};draw();return}
   if(tool==='room'){const q=snapRoomPt(x,y);gest={k:'room',x0:q.x,y0:q.y,x1:q.x,y1:q.y};draw();return}
   gest={k:'place',type:tool,x,y};draw();
@@ -1036,6 +1057,7 @@ cv.addEventListener('pointermove',e=>{
     const r=P.rooms.find(i=>i.id===g.id);if(!r)return;
     const q=snapRoomPt(g.rx+x-g.x0,g.ry+y-g.y0),dx=q.x-g.rx,dy=q.y-g.ry;
     r.x=g.rx+dx;r.y=g.ry+dy;g.its.forEach(([i,ix,iy])=>{i.x=r05(ix+dx);i.y=r05(iy+dy)});
+    (g.kids||[]).forEach(([k,kx,ky])=>{k.x=kx+dx;k.y=ky+dy});(g.gols||[]).forEach(([q,c,a,b])=>{const dc=q.o==='h'?dy:dx,dt=q.o==='h'?dx:dy;q.c=c+dc;q.a=a+dt;q.b=b+dt});
     R=compute(P);draw();return;
   }
   if(g.k==='room'){const q=snapRoomPt(x,y);g.x1=q.x;g.y1=q.y;draw();return}
@@ -1108,6 +1130,7 @@ const ICON={
   dozaS:'<rect x="11" y="11" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11l10 10M21 11 11 21" stroke="currentColor" stroke-width="1.2"/>',
   dozaM:'<rect x="8" y="8" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8l16 16M24 8 8 24" stroke="currentColor" stroke-width="1.2"/>',
   dozaL:'<rect x="4" y="7" width="24" height="18" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l24 18M28 7 4 25" stroke="currentColor" stroke-width="1.2"/>',
+  gol:'<path d="M2 16h8M22 16h8" stroke="currentColor" stroke-width="4"/><path d="M10 11v10M22 11v10" stroke="currentColor" stroke-width="2"/><path d="M12 16h8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/>',
   rez:'<rect x="3" y="12" width="26" height="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 20l8-8M12 20l8-8M18 20l8-8" stroke="currentColor" stroke-width="1.5"/>',
   grinda:'<rect x="3" y="11" width="26" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/><text x="16" y="16.5" fill="currentColor" font-size="7" font-weight="700" text-anchor="middle" dominant-baseline="middle" font-family="IBM Plex Mono,monospace">GR</text>',
   usa:'<path d="M3 26h7M24 26h5" stroke="currentColor" stroke-width="3"/><path d="M10 26V12" stroke="currentColor" stroke-width="2.4"/><path d="M10 12a14 14 0 0 1 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.5 2"/>',
@@ -1164,9 +1187,9 @@ function renderInspector(){
   }else if(sel&&sel.kind==='st'){
     const st=P.struct.find(i=>i.id===sel.id);
     if(!st){sel=null;return renderInspector()}
-    h=`<div class="ihead">${svgSym(st.k)}<div><h2>${st.k==='rez'?'Perete de rezistență':'Grindă'}</h2><p class="sub">${f(Math.abs(st.b-st.a),2)} m lungime</p></div></div>
+    h=`<div class="ihead">${svgSym(st.k)}<div><h2>${st.k==='rez'?'Perete de rezistență':st.k==='gol'?'Gol în perete':'Grindă'}</h2><p class="sub">${f(Math.abs(st.b-st.a),2)} m lungime</p></div></div>
     ${st.k==='grinda'?`<div class="fields"><label class="f">Lățime grindă (m)<input data-s="st" data-f="w" id="st-w" type="number" inputmode="decimal" min=".1" max="1" step=".05" value="${st.w}"></label></div>`:''}
-    <ul class="dchk"><li>${st.k==='rez'?'Nu se taie șlițuri și nu se fac goluri pentru doze fără acordul proiectantului de structură. Aplicația nu pune doze de derivație aici și marchează aparatele, traseele care trec prin perete și cele care merg în lungul lui.':'Grinda nu se găurește și nu se taie. Traseele de sub tavan care o traversează sunt marcate cu ✕ roșu. Treci pe sub ea, aparent, sau mută traseele în pardoseală.'}</li></ul>
+    <ul class="dchk"><li>${st.k==='gol'?(st.auto?'Peretele dintre camerele unite. Ca să-l refaci, separă camera din Detalii.':'Aici peretele lipsește: nu se pun aparate și nici doze de derivație.'):st.k==='rez'?'Nu se taie șlițuri și nu se fac goluri pentru doze fără acordul proiectantului de structură. Aplicația nu pune doze de derivație aici și marchează aparatele, traseele care trec prin perete și cele care merg în lungul lui.':'Grinda nu se găurește și nu se taie. Traseele de sub tavan care o traversează sunt marcate cu ✕ roșu. Treci pe sub ea, aparent, sau mută traseele în pardoseală.'}</li></ul>
     <div class="bar"><button class="btn dng" type="button" data-act="del">Șterge</button></div>`;
   }else if(sel&&sel.kind==='win'){
     const w=P.wins.find(i=>i.id===sel.id);
@@ -1196,7 +1219,9 @@ function renderInspector(){
   }else if(sel&&sel.kind==='room'){
     const r=P.rooms.find(i=>i.id===sel.id);
     if(!r){sel=null;return renderInspector()}
-    h=`<div class="ihead">${svgSym('room')}<div><h2>${esc(r.name)}</h2><p class="sub">Cameră · trage din nou ca s-o muți</p></div></div>
+    const par=r.of&&P.rooms.find(x=>x.id===r.of),nb=r.of?[]:[...new Map(P.rooms.filter(x=>x.id!==r.id&&x.of!==r.id&&(x.of||x.id)!==r.id&&sharedSeg(r,x)).map(x=>{const t=rootOf(P,x);return[t.id,t]})).values()];
+    h=`<div class="ihead">${svgSym('room')}<div><h2>${esc(r.name)}</h2><p class="sub">${par?'Parte din '+esc(par.name):'Cameră'} · trage din nou ca s-o muți</p></div></div>
+    ${par?`<div class="bar"><span class="muted" style="font-size:13px">Peretele dintre ele lipsește. Elementele de aici aparțin camerei ${esc(par.name)}.</span><button class="btn" type="button" data-act="unmerge">Separă</button></div>`:nb.length?`<div><h4>Fără perete între ele</h4><div class="bar">${nb.map(x=>`<button class="btn" type="button" data-act="merge" data-room="${x.id}">Unește cu ${esc(x.name)}</button>`).join('')}</div></div>`:''}
     <div class="fields">
       <label class="f full">Nume<input data-s="room" data-f="name" id="r-name" value="${esc(r.name)}"></label>
       <label class="f full">Tip<select data-s="room" data-f="type" id="r-type">${opt(RT,r.type)}</select></label>
@@ -1226,7 +1251,7 @@ let inspOpen=false;
 function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector()}
 function renderSelbar(){
   const el=$('#selbar');if(!el)return;
-  if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':JBT[tool]?'Atinge un perete ca să pui doza de '+JB[JBT[tool]].lbl+'. Traseele din cameră vor trece prin ea.':tool==='rez'?'Atinge peretele de rezistență și trage de-a lungul lui':tool==='grinda'?'Trage pe plan de-a lungul grinzii':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
+  if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':JBT[tool]?'Atinge un perete ca să pui doza de '+JB[JBT[tool]].lbl+'. Traseele din cameră vor trece prin ea.':tool==='gol'?'Atinge peretele și trage pe porțiunea care lipsește':tool==='rez'?'Atinge peretele de rezistență și trage de-a lungul lui':tool==='grinda'?'Trage pe plan de-a lungul grinzii':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span><button class="btn pri" type="button" data-sb="done">Gata, editez</button>`;return}
   if(!sel){el.innerHTML=`<span class="tag muted">Atinge un element ca să-l editezi</span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde':'Proiect și circuite'}</button>`;return}
   if(sel.kind==='seg'||sel.kind==='node'){
     const sg=sel.kind==='seg'?R.segs.find(q=>q.key===sel.key):null,nd=sel.kind==='node'?R.nodes.find(q=>q.key===sel.key):null;
@@ -1236,7 +1261,7 @@ function renderSelbar(){
     return;
   }
   const o=sel.kind==='item'?P.items.find(i=>i.id===sel.id):sel.kind==='door'?P.doors.find(i=>i.id===sel.id):sel.kind==='win'?P.wins.find(i=>i.id===sel.id):sel.kind==='st'?P.struct.find(i=>i.id===sel.id):sel.kind==='jb'?P.jb.find(i=>i.id===sel.id):P.rooms.find(i=>i.id===sel.id);if(!o){el.innerHTML='';return}
-  const name=sel.kind==='item'?T[o.type].n+(o.type==='prizaM'?` · ${nOf(o)} ${nOf(o)>1?'posturi':'post'}`:''):sel.kind==='door'?'Ușă':sel.kind==='jb'?JB[o.size].n:sel.kind==='st'?(o.k==='rez'?'Perete de rezistență':'Grindă'):sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'trage de mânere ca s-o redimensionezi':sel.kind==='st'?'șterge-l și desenează-l din nou ca să-l schimbi':'trage ca să-l muți';
+  const name=sel.kind==='item'?T[o.type].n+(o.type==='prizaM'?` · ${nOf(o)} ${nOf(o)>1?'posturi':'post'}`:''):sel.kind==='door'?'Ușă':sel.kind==='jb'?JB[o.size].n:sel.kind==='st'?(o.k==='rez'?'Perete de rezistență':o.k==='gol'?'Gol în perete':'Grindă'):sel.kind==='win'?(o.kind==='balcon'?'Ușă de balcon':'Fereastră'):o.name,help=sel.kind==='room'?'trage de mânere ca s-o redimensionezi':sel.kind==='st'?'șterge-l și desenează-l din nou ca să-l schimbi':'trage ca să-l muți';
   el.innerHTML=`<span class="tag"><b>${esc(name)}</b><span class="muted">${help}</span></span><button class="btn" type="button" data-sb="info">${inspOpen?'Ascunde detalii':'Detalii'}</button><button class="btn dng" type="button" data-sb="del">Șterge</button><button class="btn" type="button" data-sb="close" aria-label="Deselectează">✕</button>`;
 }
 function renderDyn(){
@@ -1301,7 +1326,9 @@ function deleteSel(){
   else if(k==='win')P.wins=P.wins.filter(i=>i.id!==sel.id);
   else if(k==='st')P.struct=P.struct.filter(i=>i.id!==sel.id);
   else if(k==='jb')P.jb=P.jb.filter(i=>i.id!==sel.id);
-  else{P.items=P.items.filter(i=>i.room!==sel.id);P.rooms=P.rooms.filter(r=>r.id!==sel.id)}
+  else{const r=P.rooms.find(x=>x.id===sel.id);
+    if(r&&r.of){P.items=P.items.filter(i=>!(i.x>r.x+.01&&i.x<r.x+r.w-.01&&i.y>r.y+.01&&i.y<r.y+r.h-.01));P.struct=P.struct.filter(g=>!(g.auto&&g.of===r.id));P.rooms=P.rooms.filter(x=>x.id!==r.id)}
+    else{const ks=P.rooms.filter(x=>x.of===sel.id).map(x=>x.id);P.items=P.items.filter(i=>i.room!==sel.id);P.struct=P.struct.filter(g=>!(g.auto&&(ks.includes(g.of)||g.of===sel.id)));P.rooms=P.rooms.filter(x=>x.id!==sel.id&&x.of!==sel.id)}}
   sel=null;changed(true);toast(k==='room'?'Camera a fost ștearsă. Apasă ↶ ca s-o recuperezi.':'Șters. Apasă ↶ ca să recuperezi.');
 }
 $('#selbar').addEventListener('click',e=>{
@@ -1317,6 +1344,22 @@ insp.addEventListener('click',e=>{
   const li=e.target.closest('[data-iso]');if(li){setIso(li.dataset.iso===isoId?'':li.dataset.iso);return}
   const b=e.target.closest('[data-act]');if(!b||!sel)return;
   const act=b.dataset.act,d=sel.kind==='door'?P.doors.find(i=>i.id===sel.id):null;
+  if(act==='merge'||act==='unmerge'){
+    const r=P.rooms.find(x=>x.id===sel.id);if(!r)return;snap();
+    if(act==='merge'){
+      const tg=P.rooms.find(x=>x.id===b.dataset.room);if(!tg)return;
+      const kids=P.rooms.filter(x=>x.of===r.id);
+      for(const x of[r,...kids]){x.of=tg.id;x.name=tg.name;x.type=tg.type}
+      P.items.forEach(i=>{if(i.room===r.id)i.room=tg.id});P.jb.forEach(j=>{if(j.room===r.id)j.room=tg.id});
+      const grp=P.rooms.filter(x=>x.id===tg.id||x.of===tg.id);
+      for(const x of[r,...kids])for(const y of grp){if(x===y||x.of===y.id&&y.of)continue;const sg=sharedSeg(x,y);if(sg&&!P.struct.some(g=>g.k==='gol'&&g.auto&&g.o===sg.o&&Math.abs(g.c-sg.c)<.02&&Math.abs(g.a-sg.a)<.02))P.struct.push({id:uid(),k:'gol',auto:true,of:x.id,...sg})}
+      toast(`Unită cu ${tg.name}. Peretele dintre ele a fost scos.`);
+    }else{
+      const pid=r.of;r.of=null;r.name='Cameră '+(P.rooms.length);P.struct=P.struct.filter(g=>!(g.k==='gol'&&g.auto&&g.of===r.id));
+      P.items.forEach(i=>{if(i.room===pid&&i.x>r.x+.01&&i.x<r.x+r.w-.01&&i.y>r.y+.01&&i.y<r.y+r.h-.01)i.room=r.id});
+    }
+    changed(true);return;
+  }
   if(act!=='del'){
     if(!d)return;snap();
     if(act==='flipH')d.hinge=d.hinge?0:1;
