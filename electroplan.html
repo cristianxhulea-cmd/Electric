@@ -321,6 +321,8 @@ const fS=s=>String(s).replace('.',',');
 const r05=v=>Math.round(v*20)/20;
 
 const hOf=(p,i)=>{const t=T[i.type];return i.h!=null&&i.h!==''?+i.h:(t.h==='ceil'?p.H:t.h)};
+const BOXN={2:'Doză de aparataj rotundă Ø68 (2 module)',3:'Doză de aparataj modulară 3M (503)',4:'Doză de aparataj modulară 4M (504)',7:'Doză de aparataj modulară 7M'};
+const stOf=(p,it)=>it.st||p.sockType||'schuko';
 const nOf=i=>clamp(Math.round(+i.n||3),1,5);
 const ptsOf=i=>i.type==='prizaM'?nOf(i):1;
 const codeOf=i=>i.type==='prizaM'?(nOf(i)>1?'P'+nOf(i):'P'):T[i.type].code;
@@ -668,6 +670,24 @@ function compute(p){
   return out;
 }
 
+function modBoxes(m){if(m<=0)return[];if(m<=2)return[2];if(m<=3)return[3];if(m<=4)return[4];if(m<=7)return[7];return[7,...modBoxes(m-7)]}
+function devInfo(p,it){
+  const ded=T[it.type].g==='ded',st=ded?'schuko':stOf(p,it),SN=st==='slim'?'slim':'Schuko',ms=st==='slim'?(+p.modSlim||1):(+p.modSchuko||2);
+  let socks=0,extra=0,cls=1,ck,cn,cu,mech=[];
+  switch(it.type){
+    case'priza':socks=1;ck='p1:'+st;cn=`Priză simplă ${SN} 16 A`;break;
+    case'priza2':socks=2;ck='p2:'+st;cn=`Priză dublă ${SN} 16 A`;break;
+    case'prizaM':{const n=nOf(it);socks=n;cls=n;ck='pm'+n+':'+st;cn=n===1?`Priză ${SN} 16 A cu ramă de 1 post`:`Priză ${SN} 16 A în ramă de ${n} posturi`;cu='set';break}
+    case'prizaip':socks=1;ck='ip:'+st;cn=`Priză ${SN} IP44 cu capac`;break;
+    case'tv':socks=2;extra=1;cls=2;ck='tv:'+st;cn=`Set priză TV: priză dublă ${SN} + priză TV/SAT`;cu='set';mech.push(['tvm','Priză TV/SAT modulară 1M',1]);break;
+    case'intr':extra=1;ck='i1';cn='Întrerupător simplu 10 A';mech.push(['i1','Întrerupător modular 1M',1]);break;
+    case'intr2':extra=2;ck='i2';cn='Întrerupător dublu 10 A';mech.push(['i1','Întrerupător modular 1M',2]);break;
+    default:socks=ded?1:0;ck='pd';cn='Priză Schuko 16 A pentru circuit dedicat';
+  }
+  if(socks)mech.unshift(['s:'+st,`Priză ${SN} modulară ${ms}M`,socks]);
+  const mods=socks*ms+extra;
+  return{mods,mech,cls,ck,cn,cu,boxes:modBoxes(mods),st};
+}
 function pms0(p){return p.items.filter(i=>i.type==='prizaM'&&p.rooms.some(x=>x.id===i.room)).reduce((t,i)=>t+nOf(i),0)}
 function materials(p,r){
   const m=new Map();
@@ -675,23 +695,16 @@ function materials(p,r){
   const cnt=t=>p.items.filter(i=>i.type===t&&p.rooms.some(x=>x.id===i.room)).length;
   for(const c of r.circuits){add('Cabluri','cab:'+c.cable,`Cablu ${c.cable} mm²`,'m',c.len*(1+(+p.reserve||0)/100));add('Tuburi și doze','tub:'+c.tube,`Tub flexibil de protecție Ø${c.tube} mm`,'m',c.len*1.05)}
   const racord=p.items.filter(i=>T[i.type].conn==='racord'&&r.by[i.id]).length;
-  const dedPriza=p.items.filter(i=>T[i.type].conn==='priza'&&r.by[i.id]).length;
-  const ap=pms0(p)+cnt('priza')+cnt('priza2')+cnt('prizaip')+cnt('tv')+cnt('intr')+cnt('intr2')+dedPriza;
-  add('Tuburi și doze','doza:ap','Doză de aparataj Ø68 mm','buc',ap);
+  const devs=p.items.filter(i=>p.rooms.some(x=>x.id===i.room)&&(T[i.type].g==='priza'||T[i.type].g==='intr'||(T[i.type].conn==='priza'&&r.by[i.id])));
+  if(p.aparataj==='modular'){
+    for(const it of devs){const d=devInfo(p,it);for(const bx of modBoxes(d.mods)){add('Tuburi și doze','doza:mod:'+bx,BOXN[bx],'buc',1);add('Aparataj','sup:'+bx,`Suport aparataj ${bx} module`,'buc',1);add('Aparataj','rama:'+bx+(it.type==='prizaip'?':ip':''),`Ramă ${bx} module`+(it.type==='prizaip'?' cu capac IP44':''),'buc',1)}for(const[k,n,q]of d.mech)add('Aparataj','mec:'+k,n,'buc',q)}
+  }else for(const it of devs){const d=devInfo(p,it);add('Tuburi și doze','doza:ap','Doză de aparataj Ø68 mm','buc',d.cls);add('Aparataj','cl:'+d.ck,d.cn,d.cu||'buc',1)}
   for(const k of['s','m','l','xl'])add('Tuburi și doze','doza:der:'+k,`Doză de derivație ${JB[k].lbl}`,'buc',r.phys.filter(q=>q.size===k).length);
   add('Tuburi și doze','doza:rac','Doză de racord pentru consumator fix','buc',racord);
   add('Tuburi și doze','wago','Clemă de legătură 5 conductori (tip Wago 221)','buc',r.phys.reduce((t,q)=>t+3*Math.max(1,q.cis.length),0)+racord*3);
-  add('Aparataj','ap:p','Priză simplă Schuko 16 A','buc',cnt('priza')+dedPriza);
-  add('Aparataj','ap:p2','Priză dublă Schuko 16 A','buc',cnt('priza2'));
-  const pms=p.items.filter(i=>i.type==='prizaM'&&p.rooms.some(x=>x.id===i.room));
-  for(let n=1;n<=5;n++){const c=pms.filter(i=>nOf(i)===n).length;add('Aparataj','ap:pm'+n,n===1?'Priză Schuko 16 A cu ramă de 1 post':`Priză Schuko 16 A în ramă de ${n} posturi`,'set',c)}
-  add('Aparataj','ap:ip','Priză Schuko IP44 cu capac','buc',cnt('prizaip'));
-  add('Aparataj','ap:tv','Set priză TV: priză dublă Schuko + priză TV/SAT','buc',cnt('tv'));
   const tb=p.items.find(i=>i.type==='tablou');
   if(tb&&r.tot){const tvL=p.items.filter(i=>i.type==='tv'&&p.rooms.some(x=>x.id===i.room)).reduce((t,i)=>t+Math.abs(hOf(p,tb)-r.tot.z)+Math.abs(i.x-tb.x)+Math.abs(i.y-tb.y)+Math.abs(hOf(p,i)-r.tot.z),0);
     add('Curenți slabi','coax','Cablu coaxial RG6 pentru prizele TV','m',tvL*(1+(+p.reserve||0)/100));add('Curenți slabi','tubcs','Tub flexibil Ø20 mm pentru curenți slabi, separat de cablurile de forță','m',tvL*1.05)}
-  add('Aparataj','ap:i','Întrerupător simplu 10 A','buc',cnt('intr'));
-  add('Aparataj','ap:i2','Întrerupător dublu 10 A','buc',cnt('intr2'));
   add('Iluminat','il:l','Corp de iluminat — plafonieră','buc',cnt('lumina'));
   add('Iluminat','il:s','Spot încastrat','buc',cnt('spot'));
   add('Iluminat','il:a','Aplică de perete','buc',cnt('aplica'));
@@ -718,7 +731,7 @@ function genTasks(p,r){
   const mats=materials(p,r),q=k=>(mats.find(x=>x.key===k)||{q:0}).q;
   const tub=mats.filter(x=>x.key.startsWith('tub:')).reduce((t,x)=>t+x.q,0);
   const doze=mats.filter(x=>x.key.startsWith('doza:')).reduce((t,x)=>t+x.q,0);
-  const pr=q('ap:p')+q('ap:p2')+q('ap:ip'),ii=q('ap:i')+q('ap:i2'),ll=q('il:l')+q('il:s')+q('il:a');
+  const pr=p.items.filter(i=>T[i.type].g==='priza'&&r.by[i.id]).length,ii=p.items.filter(i=>T[i.type].g==='intr'&&r.by[i.id]).length,ll=q('il:l')+q('il:s')+q('il:a');
   const L=[];
   const A=(t,h)=>L.push({id:uid(),t,s:'todo',who:'',due:'',hrs:Math.max(.5,Math.round(h*2)/2),note:''});
   A('Trasare trasee și poziții de doze pe pereți',Math.max(2,p.items.length*.1));
@@ -1173,6 +1186,7 @@ function renderInspector(){
     const t=T[it.type],room=P.rooms.find(r=>r.id===it.room),hd=t.h==='ceil'?P.H:t.h;
     h=`<div class="ihead">${svgSym(it.type)}<div><h2>${esc(t.n)}${it.type==='prizaM'?` · ${nOf(it)} ${nOf(it)>1?'posturi':'post'}`:''}</h2><p class="sub">${room?esc(room.name):'În afara camerelor'}</p></div></div>
     <div class="fields">
+      ${t.g==='priza'?`<label class="f full">Tip priză<select data-s="item" data-f="st" id="i-st"><option value="">Ca în proiect (${(P.sockType||'schuko')==='slim'?'Slim':'Schuko'})</option>${opt({schuko:'Schuko',slim:'Slim'},it.st||'__')}</select></label>`:''}
       ${it.type==='prizaM'?`<label class="f full">Număr de posturi<select data-s="item" data-f="n" id="i-n">${[1,2,3,4,5].map(v=>`<option value="${v}"${v===nOf(it)?' selected':''}>${v} ${v>1?'posturi':'post'}</option>`).join('')}</select></label>`:''}
       <label class="f full">Etichetă<input data-s="item" data-f="label" id="i-label" value="${esc(it.label||'')}" placeholder="ex. Priză TV"></label>
       ${t.g==='intr'||t.g==='tab'?'':`<label class="f">Putere (W)<input data-s="item" data-f="w" id="i-w" type="number" inputmode="decimal" min="0" step="10" value="${it.w??''}" placeholder="${t.w}"></label>`}
@@ -1247,6 +1261,10 @@ function renderInspector(){
       <label class="f">Max. prize / circuit<input data-s="proj" data-f="maxPrize" id="p-mp" type="number" min="1" max="20" step="1" value="${P.maxPrize}"></label>
       <label class="f">Max. lumini / circuit<input data-s="proj" data-f="maxLum" id="p-ml" type="number" min="1" max="30" step="1" value="${P.maxLum}"></label>
       <label class="f">Coef. simultaneitate<input data-s="proj" data-f="ks" id="p-ks" type="number" inputmode="decimal" min=".1" max="1" step=".05" value="${P.ks}"></label>
+      <label class="f">Aparataj<select data-s="proj" data-f="aparataj" id="p-ap">${opt({clasic:'Clasic',modular:'Modular'},P.aparataj||'clasic')}</select></label>
+      <label class="f">Tip priză implicit<select data-s="proj" data-f="sockType" id="p-st">${opt({schuko:'Schuko',slim:'Slim'},P.sockType||'schuko')}</select></label>
+      ${P.aparataj==='modular'?`<label class="f">Module priză Schuko<input data-s="proj" data-f="modSchuko" id="p-ms" type="number" min="1" max="4" step="1" value="${P.modSchuko||2}"></label>
+      <label class="f">Module priză slim<input data-s="proj" data-f="modSlim" id="p-msl" type="number" min="1" max="4" step="1" value="${P.modSlim||1}"></label>`:''}
       <label class="ck full"><input type="checkbox" data-s="proj" data-f="spd" id="p-spd"${P.spd?' checked':''}> Descărcător de supratensiune în tablou</label>
       <label class="ck full"><input type="checkbox" data-s="proj" data-f="shareBoxes" id="p-share"${P.shareBoxes!==false?' checked':''}> Doze comune pentru lumini și prize (mai puține doze)</label>
     </div></div>`;
@@ -1276,7 +1294,9 @@ function renderDyn(){
     const it=P.items.find(i=>i.id===sel.id);if(!it){el.innerHTML='';return}
     if(it.type==='tablou'){const t=R.tot;el.innerHTML=t&&R.circuits.length?`<dl class="spec"><dt>Circuite</dt><dd>${R.circuits.length}</dd><dt>Diferențiale</dt><dd>${R.rcds.length}</dd><dt>Disjunctor general</dt><dd>${t.main?'C'+t.main:'—'}</dd><dt>Carcasă</dt><dd>${t.panel} module</dd></dl>`:'';return}
     const c=R.circuits.find(x=>x.id===R.by[it.id]),fl=R.flag[it.id]?`<div class="flagmsg">${esc(R.flag[it.id])}</div>`:'';
-    el.innerHTML=fl+(c?`<dl class="spec"><dt>Circuit</dt><dd><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></dd><dt>Protecție</dt><dd>${c.curve}${c.In} A${c.rcd?' · '+c.rcd:''}</dd><dt>Cablu</dt><dd>${esc(c.cable)}</dd><dt>Lungime circuit</dt><dd>${f(c.len)} m</dd><dt>Cădere tensiune</dt><dd>${f(c.du,2)} %</dd></dl>`:'<p class="muted" style="margin:0">Elementul nu e încă pe niciun circuit. Pune-l într-o cameră și plasează tabloul.</p>');
+    const dv=(T[it.type].g==='priza'||T[it.type].g==='intr'||T[it.type].conn==='priza')?devInfo(P,it):null;
+    const bxh=dv?`<dl class="spec"><dt>Doză de aparataj</dt><dd>${P.aparataj==='modular'?dv.boxes.map(b=>BOXN[b].replace('Doză de aparataj ','')).join(' + ')+' · '+dv.mods+' module':(dv.cls>1?dv.cls+' × ':'')+'Ø68 mm'}</dd></dl>`:'';
+    el.innerHTML=fl+bxh+(c?`<dl class="spec"><dt>Circuit</dt><dd><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></dd><dt>Protecție</dt><dd>${c.curve}${c.In} A${c.rcd?' · '+c.rcd:''}</dd><dt>Cablu</dt><dd>${esc(c.cable)}</dd><dt>Lungime circuit</dt><dd>${f(c.len)} m</dd><dt>Cădere tensiune</dt><dd>${f(c.du,2)} %</dd></dl>`:'<p class="muted" style="margin:0">Elementul nu e încă pe niciun circuit. Pune-l într-o cameră și plasează tabloul.</p>');
     return;
   }
   if(sel&&sel.kind==='win'){
@@ -1318,6 +1338,8 @@ insp.addEventListener('input',e=>{
     if(k==='w')changed(true);else changed();return;
   }
   if(el.type==='number'){if(v===''){if(sc==='item')delete o[k];return}v=parseFloat(v);if(!isFinite(v))return;if(sc==='room')v=Math.max(.5,v);if(k==='H')v=clamp(v,2,5)}
+  if(sc==='item'&&k==='st'){if(v)o.st=v;else delete o.st;changed(true);return}
+  if(sc==='proj'&&k==='aparataj'){o.aparataj=v;changed(true);return}
   if(sc==='item'&&k==='n'){o.n=lastN=clamp(parseInt(v,10)||3,1,5);changed(true);return}
   if(sc==='item'&&k==='label'&&!v){delete o[k]}else o[k]=v;
   if(sc==='room'&&k==='type'&&/^Cameră \d+$/.test(o.name)){o.name=RT[v];const n=$('#r-name');if(n)n.value=o.name}
