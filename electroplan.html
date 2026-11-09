@@ -1844,7 +1844,7 @@ insp.addEventListener('click',e=>{
   deleteSel();
 });
 
-$('#v-calcul').addEventListener('click',e=>{const b=e.target.closest('[data-iso]');if(!b)return;if(b.dataset.lv&&b.dataset.lv!==P.lvCur)switchLevel(b.dataset.lv);setIso(b.dataset.iso)});
+$('#v-calcul').addEventListener('click',e=>{if(e.target.closest('#pdfBtn')){exportPdf();return}const b=e.target.closest('[data-iso]');if(!b)return;if(b.dataset.lv&&b.dataset.lv!==P.lvCur)switchLevel(b.dataset.lv);setIso(b.dataset.iso)});
 $('#isoSel').addEventListener('change',e=>setIso(e.target.value));
 function renderCalc(){
   const el=$('#v-calcul'),multi=P.levels.length>1,lvN=id=>(P.levels.find(l=>l.id===id)||{}).name||'';
@@ -1877,7 +1877,7 @@ function renderCalc(){
   };
   const doze=RA.levels.flatMap(x=>x.R.phys.map(n=>({...n,lvn:x.l.name})));
   el.innerHTML=`<div class="wrap">
-    <h1>Circuite și tablou</h1>
+    <div class="bar" style="justify-content:space-between"><h1>Circuite și tablou</h1><button class="btn pri" type="button" id="pdfBtn">Exportă PDF</button></div>
     <p class="lede">Calculat automat din plan${multi?` pe ${P.levels.length} niveluri`:''}: ${RA.boards.reduce((t,b)=>t+b.circuits.length,0)} circuite, trasee ${P.route==='tavan'?'orizontale la 30 cm sub tavan':'prin pardoseală'}, cablu ${esc(P.cable)} în tub de protecție.${multi&&RA.boards.length===1?' Nivelurile fără tablou propriu sunt alimentate din tabloul principal, printr-o trecere între niveluri.':''}</p>
     ${warns.length?`<ul class="warns">${warns.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
     ${RA.boards.map(board).join('')}
@@ -2036,6 +2036,89 @@ document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.cl
 
 function changed(full){R=computeLv();renderIso();renderLevels();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
 let focusId=null;
+function loadJsPDF(){return window.jspdf?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('jspdf'));document.head.appendChild(sc)})}
+const PW=2480,PH=1754,PM=70;
+function pageCanvas(title,num,tot){
+  const c2=document.createElement('canvas');c2.width=PW;c2.height=PH;const g=c2.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,PW,PH);g.strokeStyle='#111';g.lineWidth=4;g.strokeRect(PM/2,PM/2,PW-PM,PH-PM);
+  const bw=880,bh=250,bx=PW-PM/2-bw,by=PH-PM/2-bh;g.lineWidth=3;g.strokeRect(bx,by,bw,bh);
+  const rows=[['Proiect',P.name],['Beneficiar',P.client||''],['Adresă',P.adresa||''],['Planșa',title],['Data',new Date().toLocaleDateString('ro-RO')],['Întocmit',''],['Verificat (electrician autorizat ANRE)','']];
+  const rh=bh/rows.length;g.lineWidth=1.5;g.font='500 22px "IBM Plex Sans",Arial,sans-serif';g.textBaseline='middle';
+  rows.forEach(([k,v],i)=>{const y=by+i*rh;if(i)g.beginPath(),g.moveTo(bx,y),g.lineTo(bx+bw,y),g.stroke();g.fillStyle='#555';g.fillText(k,bx+14,y+rh/2);g.fillStyle='#111';g.font='600 22px "IBM Plex Sans",Arial,sans-serif';g.fillText(String(v).slice(0,48),bx+330,y+rh/2);g.font='500 22px "IBM Plex Sans",Arial,sans-serif'});
+  g.beginPath();g.moveTo(bx+320,by);g.lineTo(bx+320,by+bh);g.stroke();
+  g.font='500 20px "IBM Plex Sans",Arial,sans-serif';g.fillStyle='#555';g.textAlign='right';g.fillText(`Pagina ${num} / ${tot} · ElectroPlan`,PW-PM/2-10,by-16);g.textAlign='left';
+  g.fillStyle='#111';g.font='700 46px "Barlow Condensed","Arial Narrow",sans-serif';g.textBaseline='alphabetic';g.fillText(title,PM,PM+40);
+  return{c2,g,area:{x:PM,y:PM+70,w:PW-PM*2,h:by-PM-90}};
+}
+function planImage(w,h){
+  const keep={W,Hh,dpr,view:{...view},sel,iso:isoId,focus:focusId,hover,lay:{...layers},cw:cv.width,ch:cv.height,theme:document.documentElement.getAttribute('data-theme'),tx:txStrokes,pk:pickSw};
+  document.documentElement.setAttribute('data-theme','light');readColors();
+  sel=null;isoId='';focusId=null;hover=null;eraseHover=null;txStrokes=[];pickSw=null;Object.assign(layers,{routes:true,boxes:true,tags:true,dims:true,cmd:false});
+  W=w;Hh=h;dpr=1;cv.width=w;cv.height=h;view.rot=0;fit();draw();
+  const out=document.createElement('canvas');out.width=w;out.height=h;out.getContext('2d').drawImage(cv,0,0);
+  Object.assign(view,keep.view);W=keep.W;Hh=keep.Hh;dpr=keep.dpr;cv.width=keep.cw;cv.height=keep.ch;sel=keep.sel;isoId=keep.iso;focusId=keep.focus;hover=keep.hover;txStrokes=keep.tx;pickSw=keep.pk;Object.assign(layers,keep.lay);
+  if(keep.theme)document.documentElement.setAttribute('data-theme',keep.theme);else document.documentElement.removeAttribute('data-theme');readColors();
+  return out;
+}
+function sldPages(b,lvName){
+  const ro=b.rcds.map(r=>r.id),circs=b.circuits.slice().sort((p1,p2)=>(p1.rcd?ro.indexOf(p1.rcd)+1:0)-(p2.rcd?ro.indexOf(p2.rcd)+1:0)),LBL=230,MINC=78,area={w:PW-PM*2},per=Math.max(4,Math.floor((area.w-LBL-40)/MINC)),chunks=[];
+  for(let i=0;i<circs.length;i+=per)chunks.push(circs.slice(i,i+per));
+  return chunks.map((ch,ci)=>({title:`Schema monofilară — Tablou ${b.l?b.l.name:lvName}${chunks.length>1?` (${ci+1}/${chunks.length})`:''}`,draw:(g,a)=>{
+    const t=b.tot,ink='#111',x0=a.x+LBL,cw=(a.w-LBL-20)/ch.length,yBus=a.y+260,font=(w2,sz)=>g.font=`${w2} ${sz}px "IBM Plex Sans",Arial,sans-serif`;
+    g.strokeStyle=ink;g.fillStyle=ink;g.lineWidth=3;g.textBaseline='middle';
+    if(ci===0){
+      const mx=a.x+80;font(600,24);g.fillText(b===RA.boards[0]?'Alimentare 230 V / 50 Hz':`Din tabloul ${RA.boards[0].l.name}, ${b.feed?b.feed.id:''}`,mx+30,a.y+20);
+      g.beginPath();g.moveTo(mx,a.y);g.lineTo(mx,a.y+70);g.stroke();
+      g.strokeRect(mx-26,a.y+70,52,90);font(700,22);g.fillText(`Q0  ${t.main?'C'+t.main:'—'} 2P`,mx+40,a.y+105);font(500,20);g.fillText('Disjunctor general',mx+40,a.y+135);
+      g.beginPath();g.moveTo(mx,a.y+160);g.lineTo(mx,yBus);g.stroke();
+      if(P.spd){const sx2=mx+300;g.beginPath();g.moveTo(mx,a.y+195);g.lineTo(sx2,a.y+195);g.lineTo(sx2,a.y+205);g.stroke();g.strokeRect(sx2-15,a.y+205,30,40);g.beginPath();g.moveTo(sx2,a.y+245);g.lineTo(sx2,a.y+262);g.moveTo(sx2-16,a.y+262);g.lineTo(sx2+16,a.y+262);g.moveTo(sx2-9,a.y+270);g.lineTo(sx2+9,a.y+270);g.stroke();font(600,18);g.fillText('Descărcător SPD T2',sx2+26,a.y+225)}
+      g.lineWidth=6;g.beginPath();g.moveTo(mx,yBus);g.lineTo(x0+cw*ch.length,yBus);g.stroke();g.lineWidth=3;
+    }else{g.lineWidth=6;g.beginPath();g.moveTo(x0-20,yBus);g.lineTo(x0+cw*ch.length,yBus);g.stroke();g.lineWidth=3;font(500,20);g.fillText('(continuare)',a.x,yBus)}
+    const yR=yBus+40,yS=yBus+170,yM=yS+40,yE=yM+130;
+    const groups=[];for(const[i,c]of ch.entries()){const k=c.rcd||'';const lg=groups[groups.length-1];if(lg&&lg.k===k&&k)lg.cols.push(i);else groups.push({k,cols:[i]})}
+    for(const gr of groups){
+      const xa=x0+cw*gr.cols[0]+cw/2,xb=x0+cw*gr.cols[gr.cols.length-1]+cw/2,xm=(xa+xb)/2;
+      if(gr.k){g.beginPath();g.moveTo(xm,yBus);g.lineTo(xm,yR);g.stroke();g.strokeRect(xm-34,yR,68,80);font(700,22);g.textAlign='center';g.fillText('ΔI',xm,yR+28);font(500,16);g.fillText('30 mA',xm,yR+56);g.textAlign='left';font(600,18);g.fillText(`${gr.k} 40A tip A`,xm+42,yR+40);
+        g.beginPath();g.moveTo(xm,yR+80);g.lineTo(xm,yS);g.stroke();g.lineWidth=5;g.beginPath();g.moveTo(Math.min(xa,xm)-10,yS);g.lineTo(Math.max(xb,xm)+10,yS);g.stroke();g.lineWidth=3}
+      for(const i of gr.cols){const x=x0+cw*i+cw/2;g.beginPath();g.moveTo(x,gr.k?yS:yBus);g.lineTo(x,yM);g.lineTo(x+18,yM+46);g.moveTo(x,yM+50);g.lineTo(x,yE);g.stroke();g.beginPath();g.moveTo(x-8,yM+42);g.lineTo(x+8,yM+58);g.moveTo(x+8,yM+42);g.lineTo(x-8,yM+58);g.stroke();
+        g.beginPath();g.moveTo(x-10,yE-14);g.lineTo(x,yE);g.lineTo(x+10,yE-14);g.stroke()}
+    }
+    const rows=[['Circuit',c=>c.id,'700'],['Protecție',c=>c.curve+c.In],['Diferențial',c=>c.rcd||'—'],['Cablu',c=>c.cable.replace(P.cable+' ','')],['Tip cablu',()=>P.cable],['Lungime (m)',c=>f(c.len,1)],['Pi (W)',c=>String(Math.round(c.P))],['Ib (A)',c=>f(c.Ib,1)],['ΔU (%)',c=>f(c.du,2)],['Nivel',c=>(P.levels.find(l=>l.id===c.lv)||{}).name||'']];
+    const ty=yE+20,rh=40;g.lineWidth=1.5;font(600,19);
+    rows.forEach(([lb,fn,w2],r)=>{const y=ty+r*rh;g.strokeRect(a.x,y,LBL-10,rh);g.fillStyle='#444';g.fillText(lb,a.x+10,y+rh/2);g.fillStyle=ink;ch.forEach((c,i)=>{const x=x0+cw*i;g.strokeRect(x,y,cw,rh);font(w2||500,18);g.textAlign='center';g.fillText(fn(c),x+cw/2,y+rh/2);g.textAlign='left'});font(600,19)});
+    const dy=ty+rows.length*rh,dh=Math.min(a.y+a.h-dy,420);g.strokeRect(a.x,dy,LBL-10,dh);g.fillStyle='#444';g.fillText('Destinație',a.x+10,dy+24);g.fillStyle=ink;
+    ch.forEach((c,i)=>{const x=x0+cw*i;g.strokeRect(x,dy,cw,dh);g.save();g.translate(x+cw/2,dy+dh-12);g.rotate(-Math.PI/2);font(600,19);g.fillText(c.name.slice(0,34),0,-10);font(400,17);g.fillText(String(c.where||'').slice(0,40),0,14);g.restore()});
+    g.lineWidth=3;
+  }}));
+}
+async function exportPdf(){
+  if(!RA)R=computeLv();
+  if(!RA.boards.length||!RA.boards.some(b=>b.circuits.length)){toast('Pune tabloul și elementele pe plan înainte de export.');return}
+  toast('Pregătesc PDF-ul…');
+  try{await loadJsPDF()}catch(e){toast('Nu am putut încărca generatorul de PDF. Verifică conexiunea la internet.');return}
+  const lv0=P.lvCur,specs=[];
+  for(const l of lvSorted(P))specs.push({title:`Plan instalație electrică — ${l.name}`,plan:l.id});
+  for(const b of RA.boards)specs.push(...sldPages(b));
+  specs.push({title:'Tabel circuite',table:true});
+  const imgs=[];
+  for(const[i,sp]of specs.entries()){
+    const pg=pageCanvas(sp.title,i+1,specs.length);
+    if(sp.plan){if(P.lvCur!==sp.plan)switchLevel(sp.plan);const k2=1.7,im=planImage(Math.round(pg.area.w/k2),Math.round(pg.area.h/k2));pg.g.imageSmoothingQuality='high';pg.g.drawImage(im,pg.area.x,pg.area.y,pg.area.w,pg.area.h)}
+    else if(sp.draw)sp.draw(pg.g,pg.area);
+    else if(sp.table){const g=pg.g,a=pg.area,cols=[['Tablou',170],['Circuit',120],['Nivel',150],['Destinație',560],['Pct.',80],['Pi (W)',120],['Ib (A)',110],['Protecție',140],['Difer.',110],['Cablu',260],['L (m)',110],['ΔU %',110]];
+      let y=a.y;g.lineWidth=1.5;g.strokeStyle='#111';g.textBaseline='middle';const row=(vals,bold)=>{let x=a.x;g.font=`${bold?700:500} 20px "IBM Plex Sans",Arial,sans-serif`;cols.forEach(([,w2],k)=>{g.strokeRect(x,y,w2,38);g.fillStyle='#111';g.fillText(String(vals[k]).slice(0,Math.floor(w2/11)),x+8,y+19);x+=w2});y+=38};
+      row(cols.map(c=>c[0]),true);
+      for(const b of RA.boards)for(const c of b.circuits){if(y>a.y+a.h-40)break;row([b.l.name,c.id,(P.levels.find(l=>l.id===c.lv)||{}).name||'',`${c.name} · ${c.where||''}`,c.n,Math.round(c.P),f(c.Ib,1),c.curve+c.In,c.rcd||'—',c.cable,f(c.len,1),f(c.du,2)])}
+      g.font='500 19px "IBM Plex Sans",Arial,sans-serif';g.fillStyle='#444';g.fillText('Valori calculate orientativ conform I7-2011. Proiectul se verifică și se semnează de un electrician autorizat ANRE.',a.x,y+40)}
+    imgs.push(pg.c2.toDataURL('image/jpeg',.9));
+  }
+  if(P.lvCur!==lv0)switchLevel(lv0);resize();
+  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a3',compress:true});
+  imgs.forEach((im,i)=>{if(i)doc.addPage('a3','landscape');doc.addImage(im,'JPEG',0,0,420,297)});
+  const blob=doc.output('blob'),name=(P.name||'proiect').replace(/[^\w\-ăâîșțĂÂÎȘȚ ]+/g,'').trim().replace(/\s+/g,'_')+'_instalatie_electrica.pdf';
+  try{if(window.claude&&typeof window.claude.use==='function'){const d=await window.claude.use('downloads');if(d){await d.save({filename:name,data:blob});toast('PDF salvat.');return}}}catch(e){if(e&&e.code==='declined'){toast('Salvarea a fost anulată.');return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('PDF descărcat.');
+}
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
 function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?370:0),AH=Hh-(bot?Hh*.55:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
 function enterRoom(id){if(!P.rooms.some(z=>z.id===id))return;focusId=id;sel=null;isoId='';renderIso();setInsp(true);fitRects(groupOf(id),60);renderSelbar();draw()}
