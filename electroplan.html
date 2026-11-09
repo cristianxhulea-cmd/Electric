@@ -32,6 +32,40 @@
   --c0:#6EA6E6;--c1:#EE8A6E;--c2:#5CC28A;--c3:#B98AE0;--c4:#E8B04A;--c5:#4CC6C6;--c6:#E07AB0;--c7:#A9C25A;--struct:#C3B6DA;
   color-scheme:dark}
 [hidden]{display:none!important}
+.intro{position:fixed;inset:0;z-index:40;overflow-y:auto;color:#E8EEF3;background:
+radial-gradient(1200px 700px at 85% 15%,rgba(110,166,230,.18),transparent 60%),
+radial-gradient(900px 600px at 10% 90%,rgba(176,122,78,.16),transparent 60%),
+repeating-linear-gradient(0deg,rgba(150,180,210,.07) 0 1px,transparent 1px 32px),
+repeating-linear-gradient(90deg,rgba(150,180,210,.07) 0 1px,transparent 1px 32px),
+repeating-linear-gradient(0deg,rgba(150,180,210,.12) 0 1px,transparent 1px 160px),
+repeating-linear-gradient(90deg,rgba(150,180,210,.12) 0 1px,transparent 1px 160px),
+#0C1621;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.intro-art{position:absolute;right:-40px;bottom:-30px;width:min(780px,70vw);opacity:.55;pointer-events:none}
+.intro-in{position:relative;max-width:1180px;margin:0 auto;min-height:100%;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:48px;align-items:center;padding-block:48px;padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px))}
+.intro-brand{display:flex;align-items:center;gap:12px;font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.03em}
+.intro-brand .wires i{width:30px;height:5px}
+.intro h1{margin:28px 0 14px;font-family:var(--f-display);font-weight:700;font-size:clamp(42px,6vw,76px);line-height:.95;letter-spacing:-.01em;text-wrap:balance}
+.intro h1 em{font-style:normal;color:#E0A26C}
+.intro .lead{margin:0;max-width:52ch;font-size:18px;line-height:1.55;color:#AFC0CF}
+.intro-steps{display:flex;flex-wrap:wrap;gap:8px 18px;margin:22px 0 30px;padding:0;list-style:none;font-family:var(--f-mono);font-size:13px;color:#8FA6BA}
+.intro-steps li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#5B95E0;margin-right:8px;vertical-align:1px}
+.intro-acts{display:flex;flex-wrap:wrap;gap:12px}
+.ib{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:10px;border:1px solid rgba(175,192,207,.35);background:rgba(255,255,255,.04);color:#E8EEF3;font-size:16px;font-weight:600}
+.ib:hover{border-color:#AFC0CF;background:rgba(255,255,255,.08)}
+.ib.pri{background:#E0A26C;border-color:#E0A26C;color:#1A120B}
+.ib.pri:hover{background:#EAB384}
+.intro-card{background:rgba(12,22,33,.72);backdrop-filter:blur(6px);border:1px solid rgba(175,192,207,.2);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.intro-card h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:24px;color:#E8EEF3}
+.recent{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.recent button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(175,192,207,.18);background:rgba(255,255,255,.03);color:#E8EEF3}
+.recent button:hover{border-color:#5B95E0;background:rgba(91,149,224,.1)}
+.recent b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent small{grid-column:1/-1;color:#8FA6BA;font-family:var(--f-mono);font-size:12px}
+.recent span{color:#8FA6BA;font-size:12px;white-space:nowrap}
+.intro-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:12px;color:#7D93A7;border-top:1px solid rgba(175,192,207,.15);padding-top:16px}
+.intro-foot label{display:inline-flex;gap:8px;align-items:center}
+@media (max-width:860px){.intro-in{grid-template-columns:minmax(0,1fr);gap:28px;padding-block:28px}.intro-art{opacity:.3}}
+@media (prefers-reduced-motion:no-preference){.intro-in>*{animation:introIn .5s ease both}.intro-card{animation-delay:.12s}@keyframes introIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;overflow:hidden}
@@ -212,9 +246,36 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
+<div class="intro" id="intro" hidden>
+  <svg class="intro-art" viewBox="0 0 780 520" aria-hidden="true" fill="none">
+    <g stroke="#AFC0CF" stroke-width="6" opacity=".55"><path d="M40 40h460v200H40zM500 40h240v300H500zM40 240h260v240H40zM300 240h200v240H300z"/></g>
+    <g stroke="#AFC0CF" stroke-width="2" opacity=".5" stroke-dasharray="6 6"><path d="M330 240a70 70 0 0 1 70-70M500 180a60 60 0 0 1 60 60"/></g>
+    <path d="M400 470V300h-180V140h-90" stroke="#B07A4E" stroke-width="3"/>
+    <path d="M410 470V310h200V120h60" stroke="#5B95E0" stroke-width="3"/>
+    <path d="M390 470V290H170V380" stroke="#5DB257" stroke-width="3" stroke-dasharray="10 8"/>
+    <path d="M390 470V290H170V380" stroke="#E8CC3A" stroke-width="3" stroke-dasharray="10 8" stroke-dashoffset="9"/>
+    <g fill="#0C1621" stroke="#E8EEF3" stroke-width="3"><circle cx="130" cy="140" r="16"/><circle cx="670" cy="120" r="16"/><circle cx="170" cy="380" r="16"/><rect x="380" y="456" width="40" height="22"/></g>
+    <g stroke="#E8EEF3" stroke-width="3"><path d="M119 129l22 22M141 129l-22 22M659 109l22 22M681 109l-22 22"/></g>
+    <text x="170" y="386" fill="#E8EEF3" font-family="IBM Plex Mono,monospace" font-size="14" font-weight="700" text-anchor="middle">P</text>
+  </svg>
+  <div class="intro-in">
+    <section>
+      <div class="intro-brand"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span>ElectroPlan</div>
+      <h1>Instalația electrică, <em>de la schiță</em> la tablou.</h1>
+      <p class="lead">Desenezi casa cu penul, pui prizele și luminile, iar aplicația trasează circuitele, dimensionează cablurile și siguranțele după I7 și scoate materialele, schema monofilară și PDF-ul pentru client.</p>
+      <ul class="intro-steps"><li>Schiță cu penul</li><li>Circuite și tablou</li><li>Materiale și manoperă</li><li>PDF pentru dosar</li></ul>
+      <div class="intro-acts" id="introActs"></div>
+    </section>
+    <section class="intro-card">
+      <h2>Proiectele tale</h2>
+      <ul class="recent" id="introRecent"></ul>
+    </section>
+    <div class="intro-foot"><span>Calcule orientative conform I7-2011. Proiectul final se verifică și se semnează de un electrician autorizat ANRE.</span><label><input type="checkbox" id="introSkip"> Nu mai afișa la pornire</label></div>
+  </div>
+</div>
 <div id="app">
   <header class="top">
-    <div class="brand"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span><span class="bt">ElectroPlan</span></div>
+    <div class="brand" id="brandBtn" role="button" tabindex="0" title="Ecranul de pornire" style="cursor:pointer"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span><span class="bt">ElectroPlan</span></div>
     <div class="proj">
       <select id="projSel" aria-label="Proiect"></select>
       <button class="btn" id="newProj" type="button" title="Proiect nou"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Proiect nou</span></button>
@@ -2281,6 +2342,26 @@ R=computeLv();renderIso();
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 connectCloud();
+function showIntro(){
+  const el=$('#intro'),ps=store.projects.slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),last=ps.find(x=>!x.sample)||ps[0];
+  const rel=t=>{if(!t)return'nesalvat încă';const d=(Date.now()-t)/1000;if(d<90)return'acum';if(d<3600)return Math.round(d/60)+' min în urmă';if(d<86400)return Math.round(d/3600)+' h în urmă';return new Date(t).toLocaleDateString('ro-RO')};
+  $('#introActs').innerHTML=`${last?`<button class="ib pri" type="button" data-io="open" data-id="${last.id}">Continuă: ${esc(last.name.length>28?last.name.slice(0,27)+'…':last.name)}</button>`:''}<button class="ib${last?'':' pri'}" type="button" data-io="new">+ Proiect nou</button>${sb&&!sbUser?'<button class="ib" type="button" data-io="login">Conectează-te</button>':''}`;
+  $('#introRecent').innerHTML=ps.slice(0,6).map(x=>{const lv=Array.isArray(x.levels)?x.levels.length:1,rooms=(x.rooms||[]).filter(r=>!r.of).length+Object.values(x.lvData||{}).reduce((t,d)=>t+((d.rooms||[]).filter(r=>!r.of).length),0);return`<li><button type="button" data-io="open" data-id="${x.id}"><b>${esc(x.name)}</b><span>${x.sample?'exemplu':rel(x.updated)}</span><small>${rooms} ${rooms===1?'cameră':'camere'} · ${lv} ${lv===1?'nivel':'niveluri'}${x.client&&!x.sample?' · '+esc(x.client):''}</small></button></li>`}).join('')||'<li style="color:#8FA6BA">Nu ai încă proiecte. Începe cu „Proiect nou”.</li>';
+  try{$('#introSkip').checked=localStorage.getItem('electroplan.noIntro')==='1'}catch(e){}
+  el.hidden=false;
+}
+function hideIntro(){$('#intro').hidden=true;requestAnimationFrame(resize)}
+$('#intro').addEventListener('click',e=>{
+  const b=e.target.closest('[data-io]');if(!b)return;const k=b.dataset.io;
+  if(k==='open'){const p2=store.projects.find(x=>x.id===b.dataset.id);hideIntro();if(p2&&p2!==P)openProject(p2)}
+  else if(k==='new'){hideIntro();$('#newProj').click();setTool('schita')}
+  else if(k==='login'){hideIntro();$('#accBtn').click()}
+});
+$('#introSkip').addEventListener('change',e=>{try{localStorage.setItem('electroplan.noIntro',e.target.checked?'1':'0')}catch(x){}});
+$('#brandBtn').addEventListener('click',showIntro);
+$('#brandBtn').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showIntro()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#intro').hidden)hideIntro()},true);
+{let skip=false;try{skip=localStorage.getItem('electroplan.noIntro')==='1'}catch(e){}if(!skip&&!(location.hash||'').slice(1))showIntro()}
 const h0=(location.hash||'').slice(1);if(['calcul','materiale','lucrari'].includes(h0))showTab(h0);
 })();
 </script>

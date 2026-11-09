@@ -47,6 +47,10 @@ Deschisă din linkul Claude, aplicația salvează proiectele în contul tău, ia
 - `index.html`: pagina completă, generată cu `./build.sh`
 - `build.sh`: generează `index.html` din `electroplan.html`
 
+## Ecran de pornire
+
+La deschidere apare ecranul de pornire: continuă ultimul proiect, proiect nou, proiectele recente și conectarea. Îl redeschizi apăsând pe logo; se poate dezactiva cu „Nu mai afișa la pornire”.
+
 ## Cont și sincronizare
 
 Pe site-ul publicat, „Conectează-te” din antet trimite un link de conectare pe e-mail. După conectare, proiectele se salvează online (Supabase) și apar pe orice dispozitiv conectat cu același e-mail; modificările făcute fără internet se urcă la revenirea conexiunii. Fiecare utilizator vede doar proiectele lui (Row Level Security, vezi `supabase/migrations`). Pe linkul Claude, proiectele se salvează în contul Claude.
