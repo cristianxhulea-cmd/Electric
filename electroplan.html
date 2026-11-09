@@ -1094,39 +1094,80 @@ function strokeShape(raw){
   const sg=segsOf(rdp(raw,eps));
   return{lines:sg.map(q=>({o:q.o,c:q.sum/q.len,a:Math.min(q.s,q.e),b:Math.max(q.s,q.e)}))};
 }
+function cellsToRects(cells,xs,ys){
+  const rows=new Map();for(const[a,b]of cells){if(!rows.has(b))rows.set(b,[]);rows.get(b).push(a)}
+  let rects=[];for(const b of[...rows.keys()].sort((p1,p2)=>p1-p2)){const is=rows.get(b).sort((p1,p2)=>p1-p2);let s0=is[0],pv=is[0];const runs=[];for(const a of is.slice(1)){if(a===pv+1){pv=a;continue}runs.push([s0,pv]);s0=pv=a}runs.push([s0,pv]);
+    for(const[a0,a1]of runs){const r={x:xs[a0],w:xs[a1+1]-xs[a0],y:ys[b],h:ys[b+1]-ys[b]};const up=rects.find(q=>Math.abs(q.x-r.x)<1e-6&&Math.abs(q.w-r.w)<1e-6&&Math.abs(q.y+q.h-r.y)<1e-6);if(up)up.h+=r.h;else rects.push(r)}}
+  return rects.map(r=>({x:+r.x.toFixed(2),y:+r.y.toFixed(2),w:+r.w.toFixed(2),h:+r.h.toFixed(2)})).filter(r=>r.w>=.05&&r.h>=.05).sort((a,b)=>b.w*b.h-a.w*a.h);
+}
+function linkGroup(rootId){
+  const grp=P.rooms.filter(z=>z.id===rootId||z.of===rootId);
+  for(const c of grp){if(!c.of)continue;for(const y of grp){if(y===c)continue;const sg=sharedSeg(c,y);if(sg&&!P.struct.some(g=>g.k==='gol'&&g.auto&&g.o===sg.o&&Math.abs(g.c-sg.c)<.02&&Math.abs(g.a-sg.a)<.02&&Math.abs(g.b-sg.b)<.02))P.struct.push({id:uid(),k:'gol',auto:true,of:c.id,...sg})}}
+}
+function setRootRects(root,rects){
+  const kids=P.rooms.filter(z=>z.of===root.id).map(z=>z.id);
+  P.rooms=P.rooms.filter(z=>z.of!==root.id);P.struct=P.struct.filter(g=>!(g.auto&&(g.of===root.id||kids.includes(g.of))));
+  Object.assign(root,rects[0]);
+  for(const q of rects.slice(1))P.rooms.push({id:uid(),name:root.name,type:root.type,of:root.id,...q});
+  linkGroup(root.id);
+}
 function generatePlan(){
-  const polys=[],segs=[];
-  for(const st of P.sketch){const r=strokeShape(st.pts);if(!r)continue;if(r.poly){polys.push(r.poly)}else segs.push(...r.lines)}
-  if(!polys.length)return 0;
-  for(const pl of polys)for(let i=0;i<pl.length;i++){const a=pl[i],b=pl[(i+1)%pl.length];if(Math.abs(a.y-b.y)<Math.abs(a.x-b.x))segs.push({o:'h',c:(a.y+b.y)/2,a:Math.min(a.x,b.x),b:Math.max(a.x,b.x),pi:pl,ix:[i,(i+1)%pl.length]});else segs.push({o:'v',c:(a.x+b.x)/2,a:Math.min(a.y,b.y),b:Math.max(a.y,b.y),pi:pl,ix:[i,(i+1)%pl.length]})}
+  if(!P.sketch.length)return 0;
+  const segs=[];
+  for(const st of P.sketch){const r=strokeShape(st.pts);if(!r)continue;if(r.poly){const pl=r.poly;for(let i=0;i<pl.length;i++){const a=pl[i],b=pl[(i+1)%pl.length];if(Math.abs(a.y-b.y)<Math.abs(a.x-b.x))segs.push({o:'h',c:(a.y+b.y)/2,a:Math.min(a.x,b.x),b:Math.max(a.x,b.x)});else segs.push({o:'v',c:(a.x+b.x)/2,a:Math.min(a.y,b.y),b:Math.max(a.y,b.y)})}}else segs.push(...r.lines)}
+  if(!segs.length)return 0;
   const tol=Math.max(.3,18/view.s);
-  const clus=(vals,fixed)=>{const all=[...vals.map(v=>({v,f:false})),...fixed.map(v=>({v,f:true}))].sort((a,b)=>a.v-b.v),map=new Map();let g=[];const flush=()=>{if(!g.length)return;const fx=g.find(q=>q.f),rep=fx?fx.v:r05(g.reduce((t,q)=>t+q.v,0)/g.length);g.forEach(q=>map.set(q.v,rep));g=[]};for(const q of all){if(g.length&&q.v-g[g.length-1].v>tol)flush();g.push(q)}flush();return v=>map.has(v)?map.get(v):v};
+  const clus=(vals,fixed)=>{const all=[...vals.map(v=>({v,f:false})),...fixed.map(v=>({v,f:true}))].sort((a,b)=>a.v-b.v),map=new Map();let g=[];const flush=()=>{if(!g.length)return;const fx=g.find(q=>q.f),rep=fx?fx.v:r05(g.reduce((t,q)=>t+q.v,0)/g.length);g.forEach(q=>{if(!q.f)map.set(q.v,rep)});g=[]};for(const q of all){if(g.length&&q.v-g[g.length-1].v>tol)flush();g.push(q)}flush();return v=>map.has(v)?map.get(v):v};
   const X=[],Y=[];for(const s2 of segs){if(s2.o==='v'){X.push(s2.c);Y.push(s2.a,s2.b)}else{Y.push(s2.c);X.push(s2.a,s2.b)}}
-  const fx=P.rooms.flatMap(r=>[r.x,r.x+r.w]),fy=P.rooms.flatMap(r=>[r.y,r.y+r.h]);
-  const mx=clus(X,fx),my=clus(Y,fy);
-  for(const s2 of segs){if(s2.o==='v'){s2.c=mx(s2.c);s2.a=my(s2.a);s2.b=my(s2.b)}else{s2.c=my(s2.c);s2.a=mx(s2.a);s2.b=mx(s2.b)}}
-  const PP=polys.map(pl=>pl.map(()=>({x:0,y:0})));
-  for(const s2 of segs)if(s2.pi){const k=polys.indexOf(s2.pi);for(const i of s2.ix){if(s2.o==='v')PP[k][i].x=s2.c;else PP[k][i].y=s2.c}}
-  const xs=[...new Set(segs.flatMap(s2=>s2.o==='v'?[s2.c]:[s2.a,s2.b]))].sort((a,b)=>a-b),ys=[...new Set(segs.flatMap(s2=>s2.o==='h'?[s2.c]:[s2.a,s2.b]))].sort((a,b)=>a-b);
-  const pip=(pl,x,y)=>{let c=false;for(let i=0,j=pl.length-1;i<pl.length;j=i++){const a=pl[i],b=pl[j];if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)c=!c}return c};
-  const inRooms=(x,y)=>P.rooms.some(r=>x>r.x&&x<r.x+r.w&&y>r.y&&y<r.y+r.h);
-  const nx=xs.length-1,ny=ys.length-1;if(nx<1||ny<1)return 0;
-  const ok=(i,j)=>{const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;return xs[i+1]-xs[i]>.05&&ys[j+1]-ys[j]>.05&&PP.some(pl=>pip(pl,cx,cy))&&!inRooms(cx,cy)};
-  const wall=(o,c,m)=>segs.some(s2=>s2.o===o&&Math.abs(s2.c-c)<1e-6&&m>s2.a-1e-6&&m<s2.b+1e-6);
-  const id=new Int32Array(nx*ny).fill(-1);let reg=0;const regs=[];
-  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){if(id[j*nx+i]>=0||!ok(i,j))continue;const st=[[i,j]],cells=[];id[j*nx+i]=reg;
-    while(st.length){const[a,b]=st.pop();cells.push([a,b]);
-      const nb=[[a+1,b,'v',xs[a+1],(ys[b]+ys[b+1])/2],[a-1,b,'v',xs[a],(ys[b]+ys[b+1])/2],[a,b+1,'h',ys[b+1],(xs[a]+xs[a+1])/2],[a,b-1,'h',ys[b],(xs[a]+xs[a+1])/2]];
-      for(const[c,d,o,cc,m]of nb){if(c<0||d<0||c>=nx||d>=ny||id[d*nx+c]>=0||!ok(c,d)||wall(o,cc,m))continue;id[d*nx+c]=reg;st.push([c,d])}}
-    regs.push(cells);reg++}
-  let n=0;
-  for(const cells of regs){
-    const rows=new Map();for(const[a,b]of cells){if(!rows.has(b))rows.set(b,[]);rows.get(b).push(a)}
-    let rects=[];for(const b of[...rows.keys()].sort((p1,p2)=>p1-p2)){const is=rows.get(b).sort((p1,p2)=>p1-p2);let s0=is[0],pv=is[0];const runs=[];for(const a of is.slice(1)){if(a===pv+1){pv=a;continue}runs.push([s0,pv]);s0=pv=a}runs.push([s0,pv]);
-      for(const[a0,a1]of runs){const r={x:xs[a0],w:xs[a1+1]-xs[a0],y:ys[b],h:ys[b+1]-ys[b]};const up=rects.find(q=>Math.abs(q.x-r.x)<1e-6&&Math.abs(q.w-r.w)<1e-6&&Math.abs(q.y+q.h-r.y)<1e-6);if(up)up.h+=r.h;else rects.push(r)}}
-    rects=rects.map(r=>({x:+r.x.toFixed(2),y:+r.y.toFixed(2),w:+r.w.toFixed(2),h:+r.h.toFixed(2)})).filter(r=>r.w>=.2&&r.h>=.2);
-    const area=rects.reduce((t,r)=>t+r.w*r.h,0);if(area<.8||!rects.length)continue;
-    rects.sort((a,b)=>b.w*b.h-a.w*a.h);addRects(rects);n++;
+  const mx=clus(X,P.rooms.flatMap(r=>[r.x,r.x+r.w])),my=clus(Y,P.rooms.flatMap(r=>[r.y,r.y+r.h]));
+  for(const s2 of segs){if(s2.o==='v'){s2.c=mx(s2.c);s2.a=my(s2.a);s2.b=my(s2.b)}else{s2.c=my(s2.c);s2.a=mx(s2.a);s2.b=mx(s2.b)}if(s2.a>s2.b)[s2.a,s2.b]=[s2.b,s2.a]}
+  const rootOfR=r=>r.of||r.id;
+  for(const r of P.rooms){
+    const mates=P.rooms.filter(z=>z!==r&&rootOfR(z)===rootOfR(r));
+    for(const e of[{o:'h',c:r.y,a:r.x,b:r.x+r.w},{o:'h',c:r.y+r.h,a:r.x,b:r.x+r.w},{o:'v',c:r.x,a:r.y,b:r.y+r.h},{o:'v',c:r.x+r.w,a:r.y,b:r.y+r.h}]){
+      let pieces=[[e.a,e.b]];
+      for(const m of mates){const sg=sharedSeg(r,m);if(!sg||sg.o!==e.o||Math.abs(sg.c-e.c)>.02)continue;pieces=pieces.flatMap(([a,b])=>{const o=[];if(sg.a>a+1e-6)o.push([a,Math.min(b,sg.a)]);if(sg.b<b-1e-6)o.push([Math.max(a,sg.b),b]);return o.filter(([u,v])=>v-u>1e-6)})}
+      for(const g of P.struct)if(g.k==='gol'&&!g.auto&&g.o===e.o&&Math.abs(g.c-e.c)<.02){const ga=Math.min(g.a,g.b),gb=Math.max(g.a,g.b);pieces=pieces.flatMap(([a,b])=>{const o=[];if(ga>a+1e-6)o.push([a,Math.min(b,ga)]);if(gb<b-1e-6)o.push([Math.max(a,gb),b]);return o.filter(([u,v])=>v-u>1e-6)})}
+      for(const[a,b]of pieces)segs.push({o:e.o,c:e.c,a,b,fixed:true});
+    }
+  }
+  const uniq=a=>[...new Set(a.map(v=>+v.toFixed(3)))].sort((p1,p2)=>p1-p2);
+  const xs=uniq(segs.flatMap(s2=>s2.o==='v'?[s2.c]:[s2.a,s2.b])),ys=uniq(segs.flatMap(s2=>s2.o==='h'?[s2.c]:[s2.a,s2.b]));
+  if(xs.length<2||ys.length<2)return 0;
+  xs.unshift(xs[0]-1);xs.push(xs[xs.length-1]+1);ys.unshift(ys[0]-1);ys.push(ys[ys.length-1]+1);
+  const nx=xs.length-1,ny=ys.length-1;
+  const wall=(o,c,m)=>segs.some(s2=>s2.o===o&&Math.abs(s2.c-c)<1e-3&&m>s2.a-1e-6&&m<s2.b+1e-6);
+  const nbs=(a,b)=>[[a+1,b,'v',xs[a+1],(ys[b]+ys[b+1])/2],[a-1,b,'v',xs[a],(ys[b]+ys[b+1])/2],[a,b+1,'h',ys[b+1],(xs[a]+xs[a+1])/2],[a,b-1,'h',ys[b],(xs[a]+xs[a+1])/2]];
+  const out=new Uint8Array(nx*ny),st=[];
+  for(let i=0;i<nx;i++)for(const j of[0,ny-1])if(!out[j*nx+i]){out[j*nx+i]=1;st.push([i,j])}
+  for(let j=0;j<ny;j++)for(const i of[0,nx-1])if(!out[j*nx+i]){out[j*nx+i]=1;st.push([i,j])}
+  while(st.length){const[a,b]=st.pop();for(const[c,d,o,cc,m]of nbs(a,b)){if(c<0||d<0||c>=nx||d>=ny||out[d*nx+c]||wall(o,cc,m))continue;out[d*nx+c]=1;st.push([c,d])}}
+  const rootAt=(x,y)=>{const r=P.rooms.find(q=>x>q.x&&x<q.x+q.w&&y>q.y&&y<q.y+q.h);return r?rootOfR(r):null};
+  const id=new Int32Array(nx*ny).fill(-1),regs=[];
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    if(out[j*nx+i]||id[j*nx+i]>=0)continue;const k=regs.length,reg={cells:[],by:new Map(),fresh:[]},q=[[i,j]];id[j*nx+i]=k;
+    while(q.length){const[a,b]=q.pop();reg.cells.push([a,b]);const rt=rootAt((xs[a]+xs[a+1])/2,(ys[b]+ys[b+1])/2);if(rt){if(!reg.by.has(rt))reg.by.set(rt,[]);reg.by.get(rt).push([a,b])}else reg.fresh.push([a,b]);
+      for(const[c,d,o,cc,m]of nbs(a,b)){if(c<0||d<0||c>=nx||d>=ny||out[d*nx+c]||id[d*nx+c]>=0||wall(o,cc,m))continue;id[d*nx+c]=k;q.push([c,d])}}
+    regs.push(reg);
+  }
+  const area=cells=>cells.reduce((t,[a,b])=>t+(xs[a+1]-xs[a])*(ys[b+1]-ys[b]),0);
+  let n=0;const touched=new Set();
+  for(const reg of regs){if(reg.by.size||area(reg.fresh)<.8)continue;const rs=cellsToRects(reg.fresh,xs,ys);if(rs.length){addRects(rs);n++}}
+  const roots=[...new Set(regs.flatMap(r=>[...r.by.keys()]))];
+  for(const rid of roots){
+    const root=P.rooms.find(z=>z.id===rid);if(!root)continue;
+    const rr=regs.filter(r=>r.by.has(rid)).sort((a,b)=>area(b.by.get(rid))-area(a.by.get(rid)));
+    const main=rr[0],extra=main.by.size===1&&area(main.fresh)>=.3?main.fresh:[];
+    if(rr.length===1&&!extra.length)continue;
+    setRootRects(root,cellsToRects([...main.by.get(rid),...extra],xs,ys));touched.add(rid);
+    for(const r2 of rr.slice(1)){
+      const cells=[...r2.by.get(rid),...(r2.by.size===1?r2.fresh:[])];if(area(cells)<.5)continue;
+      const nr=addRects(cellsToRects(cells,xs,ys)),grp=P.rooms.filter(z=>z.id===nr.id||z.of===nr.id),ins=q=>grp.some(g=>q.x>g.x-1e-6&&q.x<g.x+g.w+1e-6&&q.y>g.y-1e-6&&q.y<g.y+g.h+1e-6);
+      for(const it of P.items)if(it.room===rid&&ins(it)){const inMain=P.rooms.filter(z=>z.id===rid||z.of===rid).some(g=>it.x>g.x+1e-6&&it.x<g.x+g.w-1e-6&&it.y>g.y+1e-6&&it.y<g.y+g.h-1e-6);if(!inMain)it.room=nr.id}
+      for(const j of P.jb)if(j.room===rid&&ins(j))j.room=nr.id;
+      n++;
+    }
+    n++;
   }
   if(n){P.sketch=[];sel=null}
   return n;
@@ -1135,6 +1176,7 @@ function addRects(rs){
   const n=P.rooms.filter(r=>!r.of).length+1,par={id:uid(),name:'Cameră '+n,type:'altul',...rs[0]};P.rooms.push(par);
   for(const q of rs.slice(1)){const c={id:uid(),name:par.name,type:par.type,of:par.id,...q};P.rooms.push(c);for(const y of P.rooms.filter(z=>z.id===par.id||z.of===par.id)){if(y===c)continue;const sg=sharedSeg(c,y);if(sg)P.struct.push({id:uid(),k:'gol',auto:true,of:c.id,...sg})}}
   sel={kind:'room',id:par.id};
+  return par;
 }
 function stretch(ax,L,d){
   const e=.02,sh=v=>v>=L-e?+(v+d).toFixed(2):(d<0&&v>L+d?+(L+d).toFixed(2):v),A=ax,B=ax==='x'?'w':'h';
@@ -1637,7 +1679,7 @@ $('#selbar').addEventListener('click',e=>{
   else if(b.dataset.sb==='sk-erase'){skErase=true;renderSelbar();draw()}
   else if(b.dataset.sb==='sk-undo'){snap();P.sketch.pop();changed();renderSelbar()}
   else if(b.dataset.sb==='sk-clear'){snap();P.sketch=[];changed();renderSelbar()}
-  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n)undoS.pop();if(n){setTool('select');changed(true);fit();draw();toast(`Am generat ${n} ${n===1?'cameră':'camere'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else toast('Nu am găsit camere închise în schiță. Desenează conturul complet al casei sau al camerelor.')}
+  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n)undoS.pop();if(n){setTool('select');changed(true);fit();draw();toast(`Planul a fost actualizat: ${n} ${n===1?'cameră nouă sau modificată':'camere noi sau modificate'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else toast('Nu am găsit camere închise în schiță. Desenează conturul complet al casei sau al camerelor.')}
   else if(b.dataset.sb==='info'||b.dataset.sb==='proj')setInsp(!inspOpen);
   else if(b.dataset.sb==='adj'&&sel&&sel.kind==='room')openAdj(sel.id);
   else if(b.dataset.sb==='auto'&&sel){snap();if(sel.kind==='seg')delete P.routes[sel.key];else delete P.boxes[sel.key];changed(true)}
