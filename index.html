@@ -241,6 +241,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
     </nav>
     <div class="acts">
+      <button class="btn" id="accBtn" type="button" hidden>Conectează-te</button>
       <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
       <button class="btn pri" id="installBtn" type="button" hidden>Instalează aplicația</button>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
@@ -276,6 +277,13 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   </main>
 </div>
 
+<dialog id="accDlg">
+  <form class="dl" id="accF">
+    <div><h2>Cont ElectroPlan</h2><p class="muted" style="margin:0" id="accH">Te conectezi cu adresa de e-mail. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.</p></div>
+    <label class="f" id="accEL">Adresa de e-mail<input id="accE" type="email" inputmode="email" autocomplete="email" placeholder="nume@exemplu.ro"></label>
+    <div class="bar" style="justify-content:flex-end"><button class="btn" type="button" id="accC">Închide</button><button class="btn dng" type="button" id="accOut" hidden>Deconectează-te</button><button class="btn" type="button" id="accSync" hidden>Sincronizează acum</button><button class="btn pri" type="submit" id="accGo">Trimite linkul de conectare</button></div>
+  </form>
+</dialog>
 <dialog id="dimDlg">
   <form class="dl" id="dimF">
     <div><h2 id="dimT">Lungime perete</h2><p class="muted" id="dimH" style="margin:0"></p></div>
@@ -621,13 +629,51 @@ function onRemote(snap){
   if(!cloud.busy&&!cloud.queue.size)setSync('ok');
 }
 async function connectCloud(){
-  if(!window.claude||typeof window.claude.use!=='function'){setSync('local');return}
+  if(!window.claude||typeof window.claude.use!=='function'){sbConnect();return}
   setSync('conn');let db=null;
   try{db=await window.claude.use('db')}catch(e){}
   if(!db){setSync('local');return}
   cloud.db=db;cloud.col=db.collection('proiecte');
   cloud.col.onSnapshot(onRemote,()=>{cloud.col=null;setSync('err')});
 }
+const SB_URL='https://mqyvtxrdxhaogjranrps.supabase.co',SB_KEY='sb_publishable_L2ILOYrD_mFvPdMzVVTawg_mhXFbyNe';
+let sb=null,sbUser=null,sbPullT=0;
+function loadSB(){return window.supabase?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('sb'));document.head.appendChild(sc)})}
+const sbErr=e=>({code:!e?'unavailable':e.code==='42501'||e.status===401||e.status===403?'invalid_argument':'unavailable',message:e&&e.message||''});
+const sbCol={doc:id=>({
+  set:async v=>{const{error}=await sb.from('projects').upsert({id,name:v.name||'',data:v.p,updated:v.updated||0,deleted:false});if(error)throw sbErr(error)},
+  delete:async()=>{const{error}=await sb.from('projects').update({deleted:true,updated:Date.now()}).eq('id',id);if(error)throw sbErr(error)}
+})};
+async function sbPull(){
+  if(!sb||!sbUser)return;const{data,error}=await sb.from('projects').select('id,data,updated,deleted');
+  if(error){setSync('err');return}
+  const del=new Map(data.filter(r=>r.deleted).map(r=>[r.id,r.updated]));
+  if(del.size){store.projects=store.projects.filter(p=>!del.has(p.id)||(p.updated||0)>del.get(p.id));if(!store.projects.length)store.projects.push(norm(blank('Proiect 1')))}
+  onRemote({docs:data.filter(r=>!r.deleted).map(r=>({id:r.id,data:()=>({p:r.data,updated:+r.updated})})),docChanges:()=>[]});
+}
+function renderAccount(){const b=$('#accBtn');if(!b)return;b.hidden=!sb;b.textContent=sbUser?'Cont':'Conectează-te';b.title=sbUser?sbUser.email||'':'Salvează proiectele online'}
+async function sbConnect(){
+  if(!SB_KEY||!/^https?:$/.test(location.protocol)){setSync('local');return}
+  try{await loadSB()}catch(e){setSync('local');return}
+  sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});renderAccount();
+  sb.auth.onAuthStateChange((ev,session)=>{
+    const u=session&&session.user;if(u&&sbUser&&u.id===sbUser.id){sbUser=u;return}sbUser=u||null;renderAccount();
+    if(sbUser){cloud.col=sbCol;cloud.seen=false;setSync('conn');sbPull();if(ev==='SIGNED_IN')toast('Conectat ca '+(sbUser.email||'')+'. Proiectele se sincronizează.')}
+    else{cloud.col=null;setSync('local')}
+  });
+  const{data}=await sb.auth.getSession();if(!data.session)setSync('local');
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sbUser&&Date.now()-sbPullT>15000){sbPullT=Date.now();sbPull()}});
+  window.addEventListener('online',()=>{if(sbUser){flush();sbPull()}});
+  setInterval(()=>{if(sbUser&&document.visibilityState==='visible'&&!cloud.busy)sbPull()},120000);
+}
+$('#accBtn').onclick=()=>{const on=!!sbUser;$('#accH').textContent=on?`Conectat ca ${sbUser.email}. Proiectele se salvează online automat.`:'Te conectezi cu adresa de e-mail: primești un link, îl deschizi pe acest dispozitiv și gata. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.';$('#accEL').hidden=on;$('#accGo').hidden=on;$('#accOut').hidden=!on;$('#accSync').hidden=!on;$('#accDlg').showModal()};
+$('#accC').onclick=()=>$('#accDlg').close();
+$('#accSync').onclick=async()=>{await sbPull();flush();toast('Sincronizat.')};
+$('#accOut').onclick=async()=>{await sb.auth.signOut();$('#accDlg').close();toast('Te-ai deconectat. Proiectele rămân și pe acest dispozitiv.')};
+$('#accF').addEventListener('submit',async e=>{e.preventDefault();const em=$('#accE').value.trim();if(!/^\S+@\S+\.\S+$/.test(em)){toast('Scrie o adresă de e-mail validă.');return}
+  const{error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error){toast(error.status===429?'Ai cerut prea multe linkuri. Încearcă din nou peste câteva minute.':'Nu am putut trimite linkul: '+error.message);return}
+  $('#accDlg').close();toast('Ți-am trimis un link pe '+em+'. Deschide-l pe acest dispozitiv ca să te conectezi.')});
 function snap(){undoS.push(JSON.stringify(P));if(undoS.length>80)undoS.shift();redoS=[]}
 function replaceP(q){const i=store.projects.findIndex(x=>x.id===P.id);store.projects[i]=q;P=q}
 function undo(){if(!undoS.length)return;redoS.push(JSON.stringify(P));replaceP(JSON.parse(undoS.pop()));sel=null;changed(true)}
