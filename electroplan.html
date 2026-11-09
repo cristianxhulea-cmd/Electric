@@ -242,7 +242,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
         <div class="hud">
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
-          <button class="btn" id="zFit" type="button">Încadrează</button>
+          <button class="btn" id="zFit" type="button" title="Centrează pe elementul selectat sau pe tot planul (dublă atingere pe plan)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span class="lbl" id="zFitL">Centrează</span></button>
           <button class="btn ic" id="rot90" type="button" title="Rotește planul cu 90°" aria-label="Rotește planul cu 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
           <button class="btn" id="rotReset" type="button" hidden>Îndreaptă</button>
           <span class="scale" id="scaleLbl"></span>
@@ -1151,7 +1151,7 @@ function up(e,cancel){
   const g=gest;if(!g)return;
   if(g.k==='pinch'){if(!ptrs.size)gest=null;return}
   gest=null;if(cancel){if(g.moved)changed();else draw();return}
-  if(g.k==='pan'){if(!g.moved&&!g.keep){sel=g.room?{kind:'room',id:g.room}:null;renderInspector();draw()}return}
+  if(g.k==='pan'){if(!g.moved&&!g.keep){const now=performance.now(),dbl=now-lastTap.t<350&&Math.hypot(g.X-lastTap.x,g.Y-lastTap.y)<30;lastTap={t:dbl?0:now,x:g.X,y:g.Y};if(dbl){sel=null;renderInspector();fit();draw();return}sel=g.room?{kind:'room',id:g.room}:null;renderInspector();draw()}return}
   if(g.k==='st'){const q=stFrom(g);if(!q||Math.abs(q.b-q.a)<.2){draw();return}snap();q.id=uid();if(q.a>q.b)[q.a,q.b]=[q.b,q.a];P.struct.push(q);sel={kind:'st',id:q.id};changed(true);return}
   if(g.k==='leg'&&g.moved&&P.routes[g.key]){const s0=R.segs.find(q=>q.key===g.key);if(s0)P.routes[g.key]=cleanPts(s0.pts).slice(1,-1)}
   if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'||g.k==='leg'||g.k==='node'||g.k==='moveJb'){if(g.moved)changed(true);return}
@@ -1172,7 +1172,21 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const q=loc(e);zoomAt(q.X,q.Y
 function zoomAt(X,Y,k){view.auto=false;const x=wx(X),y=wy(Y);view.s=clamp(view.s*k,10,400);view.ox=X-x*view.s;view.oy=Y-y*view.s;draw()}
 $('#zIn').onclick=()=>zoomAt(W/2,Hh/2,1.25);
 $('#zOut').onclick=()=>zoomAt(W/2,Hh/2,.8);
-$('#zFit').onclick=()=>{fit();draw()};
+function selPoint(){
+  if(!sel)return null;const k=sel.kind;
+  if(k==='item'){const o=P.items.find(i=>i.id===sel.id);return o&&{x:o.x,y:o.y}}
+  if(k==='jb'){const o=P.jb.find(i=>i.id===sel.id);return o&&{x:o.x,y:o.y}}
+  if(k==='door'||k==='win'){const o=(k==='door'?P.doors:P.wins).find(i=>i.id===sel.id);return o&&dPt(o,o.t,0)}
+  if(k==='room'){const o=P.rooms.find(i=>i.id===sel.id);return o&&{x:o.x+o.w/2,y:o.y+o.h/2}}
+  if(k==='st'){const o=P.struct.find(i=>i.id===sel.id);return o&&(o.o==='h'?{x:(o.a+o.b)/2,y:o.c}:{x:o.c,y:(o.a+o.b)/2})}
+  if(k==='seg'&&R){const o=R.segs.find(q=>q.key===sel.key);if(o){const m=o.pts[Math.floor(o.pts.length/2)];return{x:m.x,y:m.y}}}
+  if(k==='node'&&R){const o=R.nodes.find(q=>(q.bkey||q.key)===sel.key);return o&&{x:o.x,y:o.y}}
+  return null;
+}
+function centerOn(q){view.auto=false;view.ox=W/2-q.x*view.s;view.oy=Hh/2-q.y*view.s;draw()}
+function recenter(){const q=selPoint();if(q)centerOn(q);else{fit();draw()}}
+$('#zFit').onclick=recenter;
+let lastTap={t:0,x:0,y:0};
 function rotateBy(dr){const c=toLoc(W/2,Hh/2),wx0=wx(c.X),wy0=wy(c.Y);setRot(view.rot+dr);view.ox=W/2-wx0*view.s;view.oy=Hh/2-wy0*view.s;if(view.auto)fit();draw()}
 $('#rot90').onclick=()=>rotateBy(Math.PI/2);
 $('#rotReset').onclick=()=>rotateBy(-view.rot);
