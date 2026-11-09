@@ -1857,7 +1857,7 @@ function renderCalc(){
   const el=$('#v-calcul'),multi=P.levels.length>1,lvN=id=>(P.levels.find(l=>l.id===id)||{}).name||'';
   if(!RA)R=computeLv();
   const warns=RA.levels.flatMap(x=>x.R.warn.map(w=>multi?`${x.l.name}: ${w}`:w));
-  if(!RA.boards.length||!RA.boards.some(b=>b.circuits.length)){el.innerHTML=`<div class="wrap"><h1>Circuite și tablou</h1><div class="empty">${esc(warns[0]||'Adaugă elemente pe plan.')} Revino aici după ce ai pus prize, lumini și tabloul.</div></div>`;return}
+  if(!RA.boards.length||!RA.boards.some(b=>b.circuits.length)){el.innerHTML=`<div class="wrap"><div class="bar" style="justify-content:space-between"><h1>Circuite și tablou</h1><button class="btn pri" type="button" id="pdfBtn">Exportă PDF</button></div><div class="empty">${esc(warns[0]||'Adaugă elemente pe plan.')} Revino aici după ce ai pus prize, lumini și tabloul. Exportul PDF are nevoie de tablou și de cel puțin un circuit.</div></div>`;return}
   const board=b=>{
     const t=b.tot;
     const rows=b.circuits.map(c=>`<tr><td><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></td>${multi?`<td>${esc(lvN(c.lv))}</td>`:''}<td>${esc(c.name)}<div class="muted" style="font-size:12px">${esc(c.where)}</div></td><td class="n">${c.n}</td><td class="n">${Math.round(c.P)}</td><td class="n">${f(c.Ib)}</td><td class="n">${c.curve}${c.In}</td><td>${c.rcd||'—'}</td><td class="mono" style="white-space:nowrap">${esc(c.cable)}</td><td class="n">${f(c.len)}</td><td class="n"><span class="pill ${c.du<=c.lim?'ok':'bad'}">${f(c.du,2)} %</span></td><td>${c.kind==='feed'?'':`<button class="btn" type="button" data-iso="${c.id}" data-lv="${c.lv}">Vezi traseul</button>`}</td></tr>`).join('');
