@@ -930,6 +930,7 @@ function draw(){
   if(gest&&gest.k==='st'){const q=stFrom(gest);if(q)drawStruct(q,true,false)}
   if(P.sketch.length){ctx.save();ctx.strokeStyle=C.muted;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);for(const st of P.sketch){ctx.beginPath();st.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke()}ctx.restore()}
   if(P.sketchErase&&P.sketchErase.length){ctx.save();ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();ctx.lineWidth=clamp(view.s*.1,2,7)+3;ctx.setLineDash([6,4]);for(const g of P.sketchErase){const A=g.o==='h'?{x:g.a,y:g.c}:{x:g.c,y:g.a},B=g.o==='h'?{x:g.b,y:g.c}:{x:g.c,y:g.b};ctx.beginPath();ctx.moveTo(sx(A.x),sy(A.y));ctx.lineTo(sx(B.x),sy(B.y));ctx.stroke()}ctx.restore()}
+  if(skOpen.length&&tool==='schita'){ctx.save();const bad=getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();for(const q of skOpen){const X=sx(q.x),Y=sy(q.y);ctx.fillStyle=bad;ctx.globalAlpha=.18;ctx.beginPath();ctx.arc(X,Y,22,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=bad;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(X,Y,22,0,Math.PI*2);ctx.stroke()}ctx.restore()}
   if(eraseHover&&tool==='schita'){ctx.save();ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(sx(eraseHover.x),sy(eraseHover.y),ERASE_PX,0,Math.PI*2);ctx.stroke();ctx.restore()}
   if(gest&&gest.k==='sketch'){ctx.save();ctx.strokeStyle=C.accent;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();gest.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke();ctx.restore()}
   if(gest&&gest.k==='room'){
@@ -1123,12 +1124,14 @@ function setRootRects(root,rects){
   for(const q of rects.slice(1))P.rooms.push({id:uid(),name:root.name,type:root.type,of:root.id,...q});
   linkGroup(root.id);
 }
+let skOpen=[];
 function generatePlan(){
+  skOpen=[];
   if(!P.sketch.length&&!P.sketchErase.length)return 0;
   const segs=[];
   for(const st of P.sketch){const r=strokeShape(st.pts);if(!r)continue;if(r.poly){const pl=r.poly;for(let i=0;i<pl.length;i++){const a=pl[i],b=pl[(i+1)%pl.length];if(Math.abs(a.y-b.y)<Math.abs(a.x-b.x))segs.push({o:'h',c:(a.y+b.y)/2,a:Math.min(a.x,b.x),b:Math.max(a.x,b.x)});else segs.push({o:'v',c:(a.x+b.x)/2,a:Math.min(a.y,b.y),b:Math.max(a.y,b.y)})}}else segs.push(...r.lines)}
   if(!segs.length&&!P.sketchErase.length)return 0;
-  const tol=Math.max(.3,18/view.s);
+  const tol=Math.max(.35,24/view.s);
   const clus=(vals,fixed)=>{const all=[...vals.map(v=>({v,f:false})),...fixed.map(v=>({v,f:true}))].sort((a,b)=>a.v-b.v),map=new Map();let g=[];const flush=()=>{if(!g.length)return;const fx=g.find(q=>q.f),rep=fx?fx.v:r05(g.reduce((t,q)=>t+q.v,0)/g.length);g.forEach(q=>{if(!q.f)map.set(q.v,rep)});g=[]};for(const q of all){if(g.length&&q.v-g[g.length-1].v>tol)flush();g.push(q)}flush();return v=>map.has(v)?map.get(v):v};
   const X=[],Y=[];for(const s2 of segs){if(s2.o==='v'){X.push(s2.c);Y.push(s2.a,s2.b)}else{Y.push(s2.c);X.push(s2.a,s2.b)}}
   const opn=[...P.sketchErase,...P.struct.filter(g=>g.k==='gol')];
@@ -1152,6 +1155,13 @@ function generatePlan(){
       for(const[a,b]of pieces)segs.push({o:e.o,c:e.c,a,b,fixed:true});
     }
   }
+  const ext=Math.max(1,60/view.s),eq=(u,v)=>Math.abs(u-v)<1e-3;
+  const endPt=(q,w)=>q.o==='h'?{x:q[w],y:q.c}:{x:q.c,y:q[w]};
+  const touches=(q,w)=>{const t=q[w];return segs.some(o=>o!==q&&((o.o!==q.o&&eq(o.c,t)&&q.c>=o.a-1e-3&&q.c<=o.b+1e-3)||(o.o===q.o&&eq(o.c,q.c)&&t>=o.a-1e-3&&t<=o.b+1e-3)))};
+  for(let pass=0;pass<2;pass++)for(const q of segs){if(q.fixed)continue;for(const w of['a','b']){if(touches(q,w))continue;
+    let best=null,bd=ext;for(const o of segs){const rt=o.fixed?tol:ext;if(o===q||o.o===q.o||q.c<o.a-rt||q.c>o.b+rt)continue;const d=Math.abs(o.c-q[w]);if(d>=bd)continue;if(w==='a'&&o.c>=q.b-.05)continue;if(w==='b'&&o.c<=q.a+.05)continue;bd=d;best=o}
+    if(best){q[w]=best.c;if(!best.fixed){best.a=Math.min(best.a,q.c);best.b=Math.max(best.b,q.c)}}}}
+  skOpen=[];for(const q of segs){if(q.fixed)continue;for(const w of['a','b'])if(!touches(q,w))skOpen.push(endPt(q,w))}
   const uniq=a=>[...new Set(a.map(v=>+v.toFixed(3)))].sort((p1,p2)=>p1-p2);
   const xs=uniq(segs.flatMap(s2=>s2.o==='v'?[s2.c]:[s2.a,s2.b])),ys=uniq(segs.flatMap(s2=>s2.o==='h'?[s2.c]:[s2.a,s2.b]));
   if(xs.length<2||ys.length<2)return 0;
@@ -1438,7 +1448,7 @@ function up(e,cancel){
   if(g.k==='leg'&&g.moved&&P.routes[g.key]){const s0=R.segs.find(q=>q.key===g.key);if(s0)P.routes[g.key]=cleanPts(s0.pts).slice(1,-1)}
   if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'||g.k==='leg'||g.k==='node'||g.k==='moveJb'){if(g.moved)changed(true);return}
   if(g.k==='erase'){eraseHover=null;if(!P.sketch.length)renderSelbar();changed();renderSelbar();return}
-  if(g.k==='sketch'){let L=0;for(let i=1;i<g.pts.length;i++)L+=Math.hypot(g.pts[i].x-g.pts[i-1].x,g.pts[i].y-g.pts[i-1].y);if(L<.4){draw();return}snap();P.sketch.push({pts:rdp(g.pts,.03).map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))});changed();renderSelbar();return}
+  if(g.k==='sketch'){let L=0;for(let i=1;i<g.pts.length;i++)L+=Math.hypot(g.pts[i].x-g.pts[i-1].x,g.pts[i].y-g.pts[i-1].y);if(L<.4){draw();return}skOpen=[];snap();P.sketch.push({pts:rdp(g.pts,.03).map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))});changed();renderSelbar();return}
   if(g.k==='room'){
     const x=Math.min(g.x0,g.x1),y=Math.min(g.y0,g.y1),w=Math.abs(g.x1-g.x0),h=Math.abs(g.y1-g.y0);
     if(w>=.5&&h>=.5){snap();const r={id:uid(),name:'Cameră '+(P.rooms.length+1),type:'altul',x,y,w:+w.toFixed(2),h:+h.toFixed(2)};P.rooms.push(r);sel={kind:'room',id:r.id};changed(true)}else draw();
@@ -1708,7 +1718,7 @@ $('#selbar').addEventListener('click',e=>{
   else if(b.dataset.sb==='sk-erase'){skErase=true;renderSelbar();draw()}
   else if(b.dataset.sb==='sk-undo'){snap();P.sketch.pop();changed();renderSelbar()}
   else if(b.dataset.sb==='sk-clear'){snap();P.sketch=[];P.sketchErase=[];changed();renderSelbar()}
-  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n){undoS.pop();renderSelbar();draw()}if(n){setTool('select');changed(true);fit();draw();toast(`Planul a fost actualizat: ${n} ${n===1?'cameră nouă sau modificată':'camere noi sau modificate'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else {if(!P.sketchErase.length)toast('Nu am găsit camere închise în schiță. Desenează conturul sau completează-l pornind de la pereții existenți.')}}
+  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n){undoS.pop();renderSelbar();draw()}if(n){setTool('select');changed(true);fit();draw();toast(`Planul a fost actualizat: ${n} ${n===1?'cameră nouă sau modificată':'camere noi sau modificate'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else {if(skOpen.length)toast(`Conturul nu se închide: ${skOpen.length===1?'un capăt de linie nu atinge':skOpen.length+' capete de linie nu ating'} alt perete. Le-am marcat cu cerc roșu. Prelungește linia până atinge peretele și generează din nou.`);else if(!P.sketchErase.length)toast('Nu am găsit camere închise în schiță. Desenează conturul sau completează-l pornind de la pereții existenți.')}}
   else if(b.dataset.sb==='info'||b.dataset.sb==='proj')setInsp(!inspOpen);
   else if(b.dataset.sb==='adj'&&sel&&sel.kind==='room')openAdj(sel.id);
   else if(b.dataset.sb==='auto'&&sel){snap();if(sel.kind==='seg')delete P.routes[sel.key];else delete P.boxes[sel.key];changed(true)}
