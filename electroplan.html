@@ -243,6 +243,8 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
           <button class="btn" id="zFit" type="button">Încadrează</button>
+          <button class="btn ic" id="rot90" type="button" title="Rotește planul cu 90°" aria-label="Rotește planul cu 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+          <button class="btn" id="rotReset" type="button" hidden>Îndreaptă</button>
           <span class="scale" id="scaleLbl"></span>
           <select id="isoSel" class="chipsel" aria-label="Arată traseul"></select>
           <div class="layers" id="layers"></div>
@@ -539,7 +541,7 @@ store.projects.forEach(norm);
 let P=store.projects.find(x=>x.id===store.current)||store.projects[0];
 let R=null,tool='select',sel=null,undoS=[],redoS=[],tab='plan',editTask=null,hover=null;
 const layers={routes:true,boxes:true,tags:true,dims:true};
-const view={s:60,ox:40,oy:40};
+const view={s:60,ox:40,oy:40,rot:0};
 const cloud={db:null,col:null,seen:false,busy:false,queue:new Set(),last:{}};
 const pbody=p=>{const{updated,...rest}=p;return JSON.stringify(rest)};
 const markSaved=p=>{cloud.last[p.id]=pbody(p)};
@@ -781,11 +783,14 @@ let W=0,Hh=0,dpr=1,C={};
 function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();C={struct:g('--struct'),canvas:g('--canvas'),grid:g('--grid'),grid2:g('--grid2'),room:g('--room'),wall:g('--wall'),ink:g('--ink'),muted:g('--muted'),sel:g('--sel'),accent:g('--accent'),circ:[0,1,2,3,4,5,6,7].map(i=>g('--c'+i))}}
 const sx=x=>x*view.s+view.ox,sy=y=>y*view.s+view.oy,wx=X=>(X-view.ox)/view.s,wy=Y=>(Y-view.oy)/view.s;
 function resize(){const b=stage.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=Math.max(1,b.width);Hh=Math.max(1,b.height);cv.width=Math.round(W*dpr);cv.height=Math.round(Hh*dpr);cv.style.width=W+'px';cv.style.height=Hh+'px';if(view.auto)fit();draw()}
+function toLoc(X,Y){const c=Math.cos(-view.rot),s2=Math.sin(-view.rot),dx=X-W/2,dy=Y-Hh/2;return{X:W/2+dx*c-dy*s2,Y:Hh/2+dx*s2+dy*c}}
+const loc=e=>toLoc(e.offsetX,e.offsetY);
+function setRot(r){const k=Math.PI/2;r=((r%(2*Math.PI))+2*Math.PI)%(2*Math.PI);const n=Math.round(r/k)*k;if(Math.abs(r-n)<.07)r=n%(2*Math.PI);view.rot=r;const b=$('#rotReset');if(b)b.hidden=!view.rot}
 function fit(){
   const pts=[];P.rooms.forEach(r=>{pts.push([r.x,r.y],[r.x+r.w,r.y+r.h])});P.items.forEach(i=>pts.push([i.x,i.y]));
   if(!pts.length||W<10){view.s=50;view.ox=40;view.oy=40;return}
   const x0=Math.min(...pts.map(p=>p[0])),x1=Math.max(...pts.map(p=>p[0])),y0=Math.min(...pts.map(p=>p[1])),y1=Math.max(...pts.map(p=>p[1]));
-  const pad=Math.min(40,Math.max(16,Math.min(W,Hh)*.05));view.auto=true;view.s=clamp(Math.min((W-pad*2)/Math.max(1,x1-x0),(Hh-pad*2)/Math.max(1,y1-y0)),12,260);
+  const sw=Math.abs(Math.sin(view.rot))>.7,FW=sw?Hh:W,FH=sw?W:Hh,pad=Math.min(40,Math.max(16,Math.min(W,Hh)*.05));view.auto=true;view.s=clamp(Math.min((FW-pad*2)/Math.max(1,x1-x0),(FH-pad*2)/Math.max(1,y1-y0)),12,260);
   view.ox=(W-(x1-x0)*view.s)/2-x0*view.s;view.oy=(Hh-(y1-y0)*view.s)/2-y0*view.s;
 }
 const colOf=id=>{const c=R&&R.circuits.find(x=>x.id===id);return c?C.circ[c.ci%8]:C.ink};
@@ -804,11 +809,13 @@ function sym(type,X,Y,r,col,ghost,code){
 function draw(){
   if(!W)return;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=C.canvas;ctx.fillRect(0,0,W,Hh);
+  if(view.rot){ctx.translate(W/2,Hh/2);ctx.rotate(view.rot);ctx.translate(-W/2,-Hh/2)}
+  const GM=view.rot?Math.hypot(W,Hh):0;
   const step=view.s*.5>=14?.5:view.s>=14?1:5,maj=step===5?10:step===.5?1:5;
-  const gx0=Math.floor(wx(0)/step)*step,gy0=Math.floor(wy(0)/step)*step;
+  const gx0=Math.floor(wx(-GM)/step)*step,gy0=Math.floor(wy(-GM)/step)*step;
   ctx.lineWidth=1;
-  for(let x=gx0;sx(x)<=W;x+=step){const mj=Math.abs(x/maj-Math.round(x/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const X=Math.round(sx(x))+.5;ctx.beginPath();ctx.moveTo(X,0);ctx.lineTo(X,Hh);ctx.stroke()}
-  for(let y=gy0;sy(y)<=Hh;y+=step){const mj=Math.abs(y/maj-Math.round(y/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const Y=Math.round(sy(y))+.5;ctx.beginPath();ctx.moveTo(0,Y);ctx.lineTo(W,Y);ctx.stroke()}
+  for(let x=gx0;sx(x)<=W+GM;x+=step){const mj=Math.abs(x/maj-Math.round(x/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const X=Math.round(sx(x))+.5;ctx.beginPath();ctx.moveTo(X,-GM);ctx.lineTo(X,Hh+GM);ctx.stroke()}
+  for(let y=gy0;sy(y)<=Hh+GM;y+=step){const mj=Math.abs(y/maj-Math.round(y/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const Y=Math.round(sy(y))+.5;ctx.beginPath();ctx.moveTo(-GM,Y);ctx.lineTo(W+GM,Y);ctx.stroke()}
   for(const r of P.rooms){ctx.fillStyle=C.room;ctx.fillRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s)}
   ctx.lineWidth=clamp(view.s*.1,2,7);ctx.strokeStyle=C.wall;ctx.lineJoin='miter';
   for(const r of P.rooms)ctx.strokeRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s);
@@ -1037,9 +1044,9 @@ function placePt(type,x,y){
 const ptrs=new Map();let gest=null;
 cv.addEventListener('pointerdown',e=>{
   cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});hover=null;
-  if(ptrs.size===2){const[a,b]=[...ptrs.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;if(gest&&gest.k==='moveItem'&&gest.moved)changed();gest={k:'pinch',d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),s:view.s,wx:wx(cx),wy:wy(cy)};draw();return}
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;if(gest&&gest.k==='moveItem'&&gest.moved)changed();const lc=toLoc(cx,cy);gest={k:'pinch',d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),s:view.s,wx:wx(lc.X),wy:wy(lc.Y),an:Math.atan2(b.y-a.y,b.x-a.x),r0:view.rot};draw();return}
   if(ptrs.size>2)return;
-  const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
+  const{X,Y}=loc(e),x=wx(X),y=wy(Y);
   if(tool==='select'){
     const hd=hitHandle(X,Y);
     if(hd){const r=hd.r;gest={k:'resize',id:r.id,hx:hd.hx,hy:hd.hy,o:{x:r.x,y:r.y,w:r.w,h:r.h},its:P.items.filter(i=>i.room===r.id).map(i=>[i,i.x,i.y]),dos:[...P.doors,...P.wins].map(d=>[d,d.c,d.t]),X,Y,moved:false};return}
@@ -1065,11 +1072,11 @@ cv.addEventListener('pointerdown',e=>{
   gest={k:'place',type:tool,x,y};draw();
 });
 cv.addEventListener('pointermove',e=>{
-  if(!ptrs.has(e.pointerId)){if(e.pointerType!=='touch'&&T[tool]){hover={x:wx(e.offsetX),y:wy(e.offsetY)};draw()}return}
+  if(!ptrs.has(e.pointerId)){if(e.pointerType!=='touch'&&T[tool]){const q=loc(e);hover={x:wx(q.X),y:wy(q.Y)};draw()}return}
   ptrs.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
   const g=gest;if(!g)return;
-  if(g.k==='pinch'){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;view.auto=false;view.s=clamp(g.s*d/g.d,10,400);view.ox=cx-g.wx*view.s;view.oy=cy-g.wy*view.s;draw();return}
-  const X=e.offsetX,Y=e.offsetY,x=wx(X),y=wy(Y);
+  if(g.k==='pinch'){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;view.auto=false;view.s=clamp(g.s*d/g.d,10,400);setRot(g.r0+Math.atan2(b.y-a.y,b.x-a.x)-g.an);const lc=toLoc(cx,cy);view.ox=lc.X-g.wx*view.s;view.oy=lc.Y-g.wy*view.s;draw();return}
+  const{X,Y}=loc(e),x=wx(X),y=wy(Y);
   if(g.k==='resize'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<4)return;
     if(!g.moved){snap();g.moved=true}
@@ -1161,11 +1168,14 @@ function up(e,cancel){
 cv.addEventListener('pointerup',e=>up(e,false));
 cv.addEventListener('pointercancel',e=>up(e,true));
 cv.addEventListener('pointerleave',()=>{if(hover){hover=null;draw()}});
-cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.offsetX,e.offsetY,Math.exp(-e.deltaY*.0015))},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();const q=loc(e);zoomAt(q.X,q.Y,Math.exp(-e.deltaY*.0015))},{passive:false});
 function zoomAt(X,Y,k){view.auto=false;const x=wx(X),y=wy(Y);view.s=clamp(view.s*k,10,400);view.ox=X-x*view.s;view.oy=Y-y*view.s;draw()}
 $('#zIn').onclick=()=>zoomAt(W/2,Hh/2,1.25);
 $('#zOut').onclick=()=>zoomAt(W/2,Hh/2,.8);
 $('#zFit').onclick=()=>{fit();draw()};
+function rotateBy(dr){const c=toLoc(W/2,Hh/2),wx0=wx(c.X),wy0=wy(c.Y);setRot(view.rot+dr);view.ox=W/2-wx0*view.s;view.oy=Hh/2-wy0*view.s;if(view.auto)fit();draw()}
+$('#rot90').onclick=()=>rotateBy(Math.PI/2);
+$('#rotReset').onclick=()=>rotateBy(-view.rot);
 $('#focusBtn').onclick=()=>{const on=document.body.classList.toggle('focus');$('#focusBtn').setAttribute('aria-pressed',on);$('#focusBtn .lbl').textContent=on?'Ieși din ecran mare':'Ecran mare';requestAnimationFrame(resize)};
 
 const ICON={
