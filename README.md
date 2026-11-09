@@ -5,6 +5,7 @@ Aplicație web pentru proiectarea instalațiilor electrice rezidențiale, gândi
 ## Ce face
 
 - **Plan**: desenezi camerele trăgând pe grilă, apoi plasezi tabloul, prizele, luminile, întrerupătoarele și consumatorii dedicați (mașină de spălat, aer condiționat, plită, cuptor, boiler). Elementele de perete se lipesc automat de cel mai apropiat perete.
+- **Schiță rapidă**: cu „Schiță” conturezi camera cu penul, aproximativ; aplicația o îndreaptă (dreptunghi, L sau U, colțuri la 90°, lipită de camerele vecine). Atingi cotele albastre ale camerei selectate și scrii lungimea măsurată în cm: camera se ajustează, iar cele de la dreapta sau de dedesubt se mută ca să rămână lipite. „+ Cameră alăturată” adaugă o cameră la dreapta, stânga, sus sau jos, din dimensiuni.
 - **Plan rotibil**: rotești planul cu două degete, ca o hartă, sau cu butonul ↻ în pași de 90°. Se aliniază singur la 0°, 90°, 180° și 270°, iar „Îndreaptă” îl readuce la poziția inițială.
 - **Recentrare**: butonul „Centrează” aduce elementul selectat în mijlocul ecranului; fără selecție încadrează tot planul. Dubla atingere pe plan face același lucru ca butonul fără selecție.
 - **Editare**: cu „Selectează” atingi o cameră, o ușă sau un element. Bara de sus arată ce ai selectat, cu butoanele „Șterge” și „Închide”. Camerele se redimensionează trăgând de colțuri și de laturi, iar prizele și ușile de pe perete se mută odată cu el. Orice modificare se anulează cu ↶.
