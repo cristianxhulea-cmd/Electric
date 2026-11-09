@@ -1131,8 +1131,10 @@ function generatePlan(){
   const tol=Math.max(.3,18/view.s);
   const clus=(vals,fixed)=>{const all=[...vals.map(v=>({v,f:false})),...fixed.map(v=>({v,f:true}))].sort((a,b)=>a.v-b.v),map=new Map();let g=[];const flush=()=>{if(!g.length)return;const fx=g.find(q=>q.f),rep=fx?fx.v:r05(g.reduce((t,q)=>t+q.v,0)/g.length);g.forEach(q=>{if(!q.f)map.set(q.v,rep)});g=[]};for(const q of all){if(g.length&&q.v-g[g.length-1].v>tol)flush();g.push(q)}flush();return v=>map.has(v)?map.get(v):v};
   const X=[],Y=[];for(const s2 of segs){if(s2.o==='v'){X.push(s2.c);Y.push(s2.a,s2.b)}else{Y.push(s2.c);X.push(s2.a,s2.b)}}
-  const mx=clus(X,P.rooms.flatMap(r=>[r.x,r.x+r.w])),my=clus(Y,P.rooms.flatMap(r=>[r.y,r.y+r.h]));
+  const opn=[...P.sketchErase,...P.struct.filter(g=>g.k==='gol')];
+  const mx=clus(X,[...P.rooms.flatMap(r=>[r.x,r.x+r.w]),...opn.filter(g=>g.o==='h').flatMap(g=>[g.a,g.b])]),my=clus(Y,[...P.rooms.flatMap(r=>[r.y,r.y+r.h]),...opn.filter(g=>g.o==='v').flatMap(g=>[g.a,g.b])]);
   for(const s2 of segs){if(s2.o==='v'){s2.c=mx(s2.c);s2.a=my(s2.a);s2.b=my(s2.b)}else{s2.c=my(s2.c);s2.a=mx(s2.a);s2.b=mx(s2.b)}if(s2.a>s2.b)[s2.a,s2.b]=[s2.b,s2.a]}
+  for(const g of P.sketchErase){const per=g.o==='h'?'v':'h',att=segs.filter(q=>q.o===per&&(Math.abs(q.a-g.c)<1e-3||Math.abs(q.b-g.c)<1e-3)&&q.c>=g.a-tol&&q.c<=g.b+tol).map(q=>q.c);if(att.length>=2){g.a=Math.max(g.a,Math.min(...att));g.b=Math.min(g.b,Math.max(...att))}}
   const rootOfR=r=>r.of||r.id;
   const keepE=[];
   for(const g of P.sketchErase){
@@ -1194,8 +1196,9 @@ function generatePlan(){
     n++;
   }
   const opened=P.rooms.filter(z=>!z.of&&!roots.includes(z.id)&&P.sketchErase.some(g=>(g.o==='h'&&(Math.abs(g.c-z.y)<.02||Math.abs(g.c-z.y-z.h)<.02)&&g.b>z.x&&g.a<z.x+z.w)||(g.o==='v'&&(Math.abs(g.c-z.x)<.02||Math.abs(g.c-z.x-z.w)<.02)&&g.b>z.y&&g.a<z.y+z.h)));
-  if(opened.length)setTimeout(()=>toast(`${opened.map(z=>z.name).join(', ')}: ai șters un perete spre exterior și camera a rămas deschisă, așa că n-am modificat-o. Închide-o cu o linie nouă.`),2800);
-  if(n||P.sketchErase.length||gaps){P.sketch=[];P.sketchErase=[];sel=null}
+  if(opened.length)setTimeout(()=>toast(`${opened.map(z=>z.name).join(', ')}: camera e deschisă spre exterior. Desenează doar bucata care o închide, pornind de la capetele golului roșu, și generează din nou.`),n?2800:10);
+  const touchO=g=>opened.some(z=>(g.o==='h'&&(Math.abs(g.c-z.y)<.02||Math.abs(g.c-z.y-z.h)<.02)&&g.b>z.x&&g.a<z.x+z.w)||(g.o==='v'&&(Math.abs(g.c-z.x)<.02||Math.abs(g.c-z.x-z.w)<.02)&&g.b>z.y&&g.a<z.y+z.h));
+  if(n||gaps){P.sketch=[];P.sketchErase=P.sketchErase.filter(touchO);sel=null}
   return n||gaps;
 }
 function addRects(rs){
@@ -1705,7 +1708,7 @@ $('#selbar').addEventListener('click',e=>{
   else if(b.dataset.sb==='sk-erase'){skErase=true;renderSelbar();draw()}
   else if(b.dataset.sb==='sk-undo'){snap();P.sketch.pop();changed();renderSelbar()}
   else if(b.dataset.sb==='sk-clear'){snap();P.sketch=[];P.sketchErase=[];changed();renderSelbar()}
-  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n)undoS.pop();if(n){setTool('select');changed(true);fit();draw();toast(`Planul a fost actualizat: ${n} ${n===1?'cameră nouă sau modificată':'camere noi sau modificate'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else toast('Nu am găsit camere închise în schiță. Desenează conturul complet al casei sau al camerelor.')}
+  else if(b.dataset.sb==='sk-gen'){snap();const n=generatePlan();if(!n){undoS.pop();renderSelbar();draw()}if(n){setTool('select');changed(true);fit();draw();toast(`Planul a fost actualizat: ${n} ${n===1?'cameră nouă sau modificată':'camere noi sau modificate'}. Atinge o cameră și apoi cotele albastre ca să scrii lungimile.`)}else {if(!P.sketchErase.length)toast('Nu am găsit camere închise în schiță. Desenează conturul sau completează-l pornind de la pereții existenți.')}}
   else if(b.dataset.sb==='info'||b.dataset.sb==='proj')setInsp(!inspOpen);
   else if(b.dataset.sb==='adj'&&sel&&sel.kind==='room')openAdj(sel.id);
   else if(b.dataset.sb==='auto'&&sel){snap();if(sel.kind==='seg')delete P.routes[sel.key];else delete P.boxes[sel.key];changed(true)}
