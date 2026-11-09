@@ -227,6 +227,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
     </nav>
     <div class="acts">
       <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
+      <button class="btn pri" id="installBtn" type="button" hidden>Instalează aplicația</button>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="btn ic" id="redoBtn" type="button" title="Refă (Ctrl+Y)" aria-label="Refă"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
       <button class="btn" id="ioBtn" type="button" title="Salvare / import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="lbl">Salvare / import</span></button>
@@ -2224,6 +2225,11 @@ mq.addEventListener?.('change',retheme);
 new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 new ResizeObserver(()=>{if(tab==='plan')resize()}).observe(stage);
 
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('#installBtn').hidden=false});
+$('#installBtn').onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();try{await deferredInstall.userChoice}catch(e){}deferredInstall=null;$('#installBtn').hidden=true};
+window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;toast('Aplicația a fost instalată. O găsești pe ecranul de pornire.')});
+if('serviceWorker' in navigator&&window.isSecureContext&&/^https?:$/.test(location.protocol)&&!window.claude)navigator.serviceWorker.register('sw.js').catch(()=>{});
 readColors();renderTools();renderLayers();renderProjSel();renderLevels();
 R=computeLv();renderIso();
 renderInspector();

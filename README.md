@@ -47,6 +47,10 @@ Deschisă din linkul Claude, aplicația salvează proiectele în contul tău, ia
 - `index.html`: pagina completă, generată cu `./build.sh`
 - `build.sh`: generează `index.html` din `electroplan.html`
 
+## Instalare ca aplicație
+
+Pe site-ul publicat (Vercel), în Chrome pe tabletă sau telefon: butonul „Instalează aplicația” din antet sau meniul ⋮ → „Instalează aplicația” / „Adaugă pe ecranul de pornire”. Aplicația se deschide pe tot ecranul, fără bara browserului, și funcționează și fără internet după prima deschidere. Pe iPad/iPhone: Safari → Partajează → „Adaugă pe ecranul principal”.
+
 ## Rulare
 
 Deschide `index.html` în browser sau activează GitHub Pages pe ramura principală.
