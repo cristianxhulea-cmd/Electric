@@ -92,6 +92,7 @@ main{min-height:0;position:relative}
 .selbar .tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:13px;max-width:100%}
 .selbar .tag b{font-weight:600}
 .selbar .tag svg{width:22px;height:22px;flex:none}
+.nameEd{position:absolute;z-index:7;font:600 18px var(--f-body);padding:6px 10px;border:2px solid var(--accent);border-radius:8px;background:var(--canvas);color:var(--ink);width:min(260px,70%);transform-origin:0 50%}
 .selbar .btn{min-height:36px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -244,6 +245,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <div class="stage" id="stage">
         <canvas id="cv"></canvas>
         <div class="selbar" id="selbar"></div>
+        <input class="nameEd" id="nameEd" hidden aria-label="Numele camerei" autocomplete="off">
         <div class="hud">
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
@@ -329,10 +331,10 @@ const T={
   trecere:{n:'Trecere între niveluri',g:'aux',w:0,h:0,code:'TR'},
   tablou:{n:'Tablou electric',g:'tab',w:0,h:1.6,code:'TE'}
 };
-const TOOLS=[['Plan',['select','schita','room','usa','geam','gol']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou','trecere']]];
+const TOOLS=[['Plan',['select','schita','scris','room','usa','geam','gol']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou','trecere']]];
 const JB={s:{n:'Doză Ø80',cap:4,lbl:'Ø80 mm',k:5},m:{n:'Doză 100×100',cap:6,lbl:'100×100 mm',k:6},l:{n:'Doză 160×100',cap:10,lbl:'160×100 mm',k:8},xl:{n:'Doză 200×150',cap:16,lbl:'200×150 mm',k:10}};
 const JBT={dozaS:'s',dozaM:'m',dozaL:'l'};
-const SHORT={trecere:'Trecere nivel',schita:'Schiță',gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
+const SHORT={scris:'Scris',trecere:'Trecere nivel',schita:'Schiță',gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
 const RT={living:'Living',dormitor:'Dormitor',bucatarie:'Bucătărie',baie:'Baie',hol:'Hol',birou:'Birou',debara:'Debara',altul:'Altă cameră'};
 const ST={todo:'De făcut',doing:'În lucru',done:'Finalizat'};
 const KEY='electroplan.v1';
@@ -879,10 +881,11 @@ function draw(){
   for(const r of P.rooms){ctx.fillStyle=C.room;ctx.fillRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s)}
   ctx.lineWidth=clamp(view.s*.1,2,7);ctx.strokeStyle=C.wall;ctx.lineJoin='miter';
   for(const r of P.rooms)ctx.strokeRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s);
+  labelHits=[];
   for(const r of P.rooms){
     if(r.of)continue;
     const area=P.rooms.filter(x=>x.id===r.id||x.of===r.id).reduce((t,x)=>t+x.w*x.h,0);
-        if(r.w*view.s>60){const lx=sx(r.x)+16,ly=sy(r.y)+(layers.dims&&view.s>=25?34:20);ctx.font=`600 ${clamp(view.s*.2,11,15)}px "IBM Plex Sans",system-ui,sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=C.ink;ctx.fillText(r.name,lx,ly);txt(f(area,1)+' m²',lx,ly+16,11,400,C.muted,'left')}
+        if(r.w*view.s>60){const lx=sx(r.x)+16,ly=sy(r.y)+(layers.dims&&view.s>=25?34:20);ctx.font=`600 ${clamp(view.s*.2,11,15)}px "IBM Plex Sans",system-ui,sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle=C.ink;ctx.fillText(r.name,lx,ly);labelHits.push({id:r.id,x:lx-6,y:ly-14,w:ctx.measureText(r.name).width+12,h:30,lx,ly});txt(f(area,1)+' m²',lx,ly+16,11,400,C.muted,'left')}
     if(layers.dims&&view.s>=25){
       txt(f(r.w,2)+' m',sx(r.x)+16,sy(r.y)+13,10.5,500,C.muted,'left');
       ctx.save();ctx.translate(sx(r.x)+12,sy(r.y+r.h/2));ctx.rotate(-Math.PI/2);txt(f(r.h,2)+' m',0,0,10.5,500,C.muted);ctx.restore();
@@ -937,6 +940,8 @@ function draw(){
   if(gest&&gest.k==='st'){const q=stFrom(gest);if(q)drawStruct(q,true,false)}
   if(P.sketch.length){ctx.save();ctx.strokeStyle=C.muted;ctx.lineWidth=2.2;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);for(const st of P.sketch){ctx.beginPath();st.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke()}ctx.restore()}
   if(P.sketchErase&&P.sketchErase.length){ctx.save();ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();ctx.lineWidth=clamp(view.s*.1,2,7)+3;ctx.setLineDash([6,4]);for(const g of P.sketchErase){const A=g.o==='h'?{x:g.a,y:g.c}:{x:g.c,y:g.a},B=g.o==='h'?{x:g.b,y:g.c}:{x:g.c,y:g.b};ctx.beginPath();ctx.moveTo(sx(A.x),sy(A.y));ctx.lineTo(sx(B.x),sy(B.y));ctx.stroke()}ctx.restore()}
+  if(txStrokes.length){ctx.save();ctx.strokeStyle=C.accent;ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';for(const st of txStrokes){ctx.beginPath();st.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke()}if(gest&&gest.k==='write'){ctx.beginPath();gest.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke()}ctx.restore()}
+  else if(gest&&gest.k==='write'){ctx.save();ctx.strokeStyle=C.accent;ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();gest.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke();ctx.restore()}
   if(skOpen.length&&tool==='schita'){ctx.save();const bad=getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();for(const q of skOpen){const X=sx(q.x),Y=sy(q.y);ctx.fillStyle=bad;ctx.globalAlpha=.18;ctx.beginPath();ctx.arc(X,Y,22,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=bad;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(X,Y,22,0,Math.PI*2);ctx.stroke()}ctx.restore()}
   if(eraseHover&&tool==='schita'){ctx.save();ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(sx(eraseHover.x),sy(eraseHover.y),ERASE_PX,0,Math.PI*2);ctx.stroke();ctx.restore()}
   if(gest&&gest.k==='sketch'){ctx.save();ctx.strokeStyle=C.accent;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();gest.pts.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke();ctx.restore()}
@@ -1131,7 +1136,39 @@ function setRootRects(root,rects){
   for(const q of rects.slice(1))P.rooms.push({id:uid(),name:root.name,type:root.type,of:root.id,...q});
   linkGroup(root.id);
 }
-let skOpen=[];
+let skOpen=[],txStrokes=[],txBusy=false,labelHits=[],SAMP;
+function guessType(n){const t=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(/dormitor|camera copil|camera de dormit/.test(t))return'dormitor';if(/baie|wc|toaleta|dus/.test(t))return'baie';if(/bucatarie|bucat/.test(t))return'bucatarie';if(/hol|antreu|vestibul|coridor/.test(t))return'hol';if(/living|sufragerie|camera de zi/.test(t))return'living';if(/birou/.test(t))return'birou';if(/debara|camara|depozit|dressing/.test(t))return'debara';return null}
+function renameRoom(r,name){name=String(name||'').replace(/^["'„”]+|["'„”.]+$/g,'').trim().slice(0,40);if(!name)return false;snap();const ty=guessType(name);for(const z of P.rooms)if(z.id===r.id||z.of===r.id){z.name=name;if(ty)z.type=ty}changed(true);toast(`Camera se numește acum „${name}”${ty?' ('+RT[ty].toLowerCase()+')':''}.`);return true}
+function toScr(X,Y){const c=Math.cos(view.rot),s2=Math.sin(view.rot),dx=X-W/2,dy=Y-Hh/2;return{X:W/2+dx*c-dy*s2,Y:Hh/2+dx*s2+dy*c}}
+function openNameEditor(r){
+  const ed=$('#nameEd'),h=labelHits.find(q=>q.id===r.id),pt=h?toScr(h.lx-8,h.ly):{X:W/2-120,Y:Hh/2};
+  ed.style.left=Math.max(8,Math.min(W-200,pt.X))+'px';ed.style.top=Math.max(8,pt.Y-18)+'px';ed.value=r.name;ed.dataset.id=r.id;ed.hidden=false;setTimeout(()=>{ed.focus();ed.select()},30);
+}
+$('#nameEd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur()}else if(e.key==='Escape'){e.target.dataset.id='';e.target.blur()}});
+$('#nameEd').addEventListener('blur',e=>{const ed=e.target,r=P.rooms.find(z=>z.id===ed.dataset.id);ed.hidden=true;if(r&&ed.value.trim()&&ed.value.trim()!==r.name)renameRoom(r,ed.value);ed.dataset.id=''});
+async function getSample(){if(SAMP!==undefined)return SAMP;SAMP=null;try{if(window.claude&&typeof window.claude.use==='function'){const s2=await window.claude.use('sample');if(s2){const lim=await s2.limits().catch(()=>null);if(lim&&lim.images)SAMP=s2}}}catch(e){}return SAMP}
+async function recognizeName(){
+  if(!txStrokes.length||txBusy)return;
+  const pts=txStrokes.flat(),cx=pts.reduce((t,q)=>t+q.x,0)/pts.length,cy=pts.reduce((t,q)=>t+q.y,0)/pts.length;
+  let rr=hitRoom(cx,cy);if(rr&&rr.of)rr=P.rooms.find(z=>z.id===rr.of)||rr;
+  if(!rr){toast('Scrie în interiorul chenarului unei camere.');return}
+  const xs=pts.map(q=>q.x),ys=pts.map(q=>q.y),x0=Math.min(...xs),y0=Math.min(...ys),bw=Math.max(...xs)-x0||.1,bh=Math.max(...ys)-y0||.1,sc=Math.min(900/bw,300/bh),pad=24;
+  const cnv=document.createElement('canvas');cnv.width=Math.ceil(bw*sc+pad*2);cnv.height=Math.ceil(bh*sc+pad*2);const g2=cnv.getContext('2d');g2.fillStyle='#fff';g2.fillRect(0,0,cnv.width,cnv.height);g2.strokeStyle='#000';g2.lineWidth=Math.max(3,cnv.height/40);g2.lineCap='round';g2.lineJoin='round';
+  for(const st of txStrokes){g2.beginPath();st.forEach((q,i)=>{const X=pad+(q.x-x0)*sc,Y=pad+(q.y-y0)*sc;i?g2.lineTo(X,Y):g2.moveTo(X,Y)});g2.stroke()}
+  const smp=await getSample();
+  if(!smp){txStrokes=[];renderSelbar();draw();openNameEditor(rr);toast('Aici nu pot citi scrisul automat. Scrie numele în câmpul deschis; tastatura tabletei poate transforma scrisul de mână în text.');return}
+  txBusy=true;renderSelbar();
+  try{
+    const blob=await new Promise(res=>cnv.toBlob(res,'image/png'));
+    const {text}=await smp('Imaginea conține un text scris de mână cu penul pe o tabletă: numele unei încăperi dintr-o locuință, în limba română (de exemplu Dormitor 1, Baie, Bucătărie, Hol, Living, Birou). Transcrie exact textul, cu diacritice și majuscule corecte. Răspunde doar cu textul, fără ghilimele și fără alte cuvinte. Dacă nu se poate citi, răspunde doar cu ?',{images:[blob],modelTier:'quick',cache:false});
+    const t=String(text||'').split('\n')[0].trim();
+    txStrokes=[];
+    if(!t||t==='?'){toast('Nu am putut citi scrisul. Scrie mai mare sau corectează în câmpul deschis.');openNameEditor(rr)}else renameRoom(rr,t);
+  }catch(e){
+    const m={not_granted:'Nu ai permis aplicației să folosească Claude. Scrie numele în câmpul deschis.',rate_limited:'Ai folosit Claude mult în ultimul timp. Încearcă puțin mai târziu sau scrie numele în câmpul deschis.',cancelled:''};
+    const msg=m[e&&e.code]??'Nu am putut citi scrisul acum. Scrie numele în câmpul deschis.';if(msg)toast(msg);txStrokes=[];openNameEditor(rr);
+  }finally{txBusy=false;renderSelbar();draw()}
+}
 function generatePlan(){
   skOpen=[];
   if(!P.sketch.length&&!P.sketchErase.length)return 0;
@@ -1342,6 +1379,8 @@ cv.addEventListener('pointerdown',e=>{
   if(ptrs.size>2)return;
   const{X,Y}=loc(e),x=wx(X),y=wy(Y);
   if(tool==='select'){
+    const lh=labelHits.find(h=>X>=h.x&&X<=h.x+h.w&&Y>=h.y&&Y<=h.y+h.h);
+    if(lh){const rr=P.rooms.find(z=>z.id===lh.id);if(rr){sel={kind:'room',id:rr.id};renderInspector();draw();openNameEditor(rr);return}}
     const cp=chips.find(c=>sel&&sel.kind==='room'&&c.id===sel.id&&Math.abs(X-c.X)<=c.w/2+4&&Math.abs(Y-c.Y)<=c.h/2+4);
     if(cp){openDim(cp.id,cp.ax);return}
     const hd=hitHandle(X,Y);
@@ -1364,6 +1403,7 @@ cv.addEventListener('pointerdown',e=>{
   }
   if(tool==='rez'||tool==='gol'){const e=nearEdge(x,y);if(!e){toast('Atinge un perete și trage de-a lungul lui.');return}gest={k:'st',type:tool,edge:e,t0:clamp(r05(e.o==='h'?x:y),e.lo,e.hi),x,y};draw();return}
   if(tool==='grinda'){gest={k:'st',type:'grinda',x0:x,y0:y,x,y};draw();return}
+  if(tool==='scris'){gest={k:'write',pts:[{x,y}]};draw();return}
   if(tool==='schita'){if(skErase||(e.pointerType==='pen'&&(e.buttons&32))){snap();gest={k:'erase',last:{x,y},moved:false};eraseAlong({x,y},{x,y});eraseHover={x,y};draw();return}gest={k:'sketch',pts:[{x,y}]};draw();return}
   if(tool==='room'){const q=snapRoomPt(x,y);gest={k:'room',x0:q.x,y0:q.y,x1:q.x,y1:q.y};draw();return}
   gest={k:'place',type:tool,x,y};draw();
@@ -1410,6 +1450,7 @@ cv.addEventListener('pointermove',e=>{
     R=computeLv();draw();return;
   }
   if(g.k==='room'){const q=snapRoomPt(x,y);g.x1=q.x;g.y1=q.y;draw();return}
+  if(g.k==='write'){const l=g.pts[g.pts.length-1];if(Math.hypot(x-l.x,y-l.y)*view.s>2){g.pts.push({x,y});draw()}return}
   if(g.k==='erase'){eraseAlong(g.last,{x,y});g.last={x,y};g.moved=true;eraseHover={x,y};draw();return}
   if(g.k==='sketch'){const l=g.pts[g.pts.length-1];if(Math.hypot(x-l.x,y-l.y)*view.s>3){g.pts.push({x,y});draw()}return}
   if(g.k==='st'){g.x=x;g.y=y;draw();return}
@@ -1454,6 +1495,7 @@ function up(e,cancel){
   if(g.k==='st'){const q=stFrom(g);if(!q||Math.abs(q.b-q.a)<.2){draw();return}snap();q.id=uid();if(q.a>q.b)[q.a,q.b]=[q.b,q.a];P.struct.push(q);sel={kind:'st',id:q.id};changed(true);return}
   if(g.k==='leg'&&g.moved&&P.routes[g.key]){const s0=R.segs.find(q=>q.key===g.key);if(s0)P.routes[g.key]=cleanPts(s0.pts).slice(1,-1)}
   if(g.k==='moveItem'||g.k==='moveRoom'||g.k==='moveDoor'||g.k==='moveWin'||g.k==='resize'||g.k==='leg'||g.k==='node'||g.k==='moveJb'){if(g.moved)changed(true);return}
+  if(g.k==='write'){txStrokes.push(g.pts.length>1?g.pts:[g.pts[0],{x:g.pts[0].x+.01,y:g.pts[0].y}]);renderSelbar();draw();return}
   if(g.k==='erase'){eraseHover=null;if(!P.sketch.length)renderSelbar();changed();renderSelbar();return}
   if(g.k==='sketch'){let L=0;for(let i=1;i<g.pts.length;i++)L+=Math.hypot(g.pts[i].x-g.pts[i-1].x,g.pts[i].y-g.pts[i-1].y);if(L<.4){draw();return}skOpen=[];snap();P.sketch.push({pts:rdp(g.pts,.03).map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))});changed();renderSelbar();return}
   if(g.k==='room'){
@@ -1500,6 +1542,7 @@ const ICON={
   dozaS:'<rect x="11" y="11" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11l10 10M21 11 11 21" stroke="currentColor" stroke-width="1.2"/>',
   dozaM:'<rect x="8" y="8" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8l16 16M24 8 8 24" stroke="currentColor" stroke-width="1.2"/>',
   dozaL:'<rect x="4" y="7" width="24" height="18" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l24 18M28 7 4 25" stroke="currentColor" stroke-width="1.2"/>',
+  scris:'<path d="M5 24c3-7 5-12 7-12s-1 10 2 10 4-9 6-9-1 8 2 8 3-4 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 28h24" stroke="currentColor" stroke-width="1.4"/>',
   trecere:'<circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><path d="M16 9v14M12 13l4-4 4 4M12 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2"/>',
   schita:'<path d="M5 25c2-6 1-13 3-18 5 1 12-1 18 1-1 5 1 12-1 17-6-1-13 1-20 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-dasharray="3 2"/><path d="M22 21l5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   gol:'<path d="M2 16h8M22 16h8" stroke="currentColor" stroke-width="4"/><path d="M10 11v10M22 11v10" stroke="currentColor" stroke-width="2"/><path d="M12 16h8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/>',
@@ -1524,7 +1567,7 @@ function renderTools(){
   $('#tools').innerHTML=TOOLS.map(([l,ts])=>`<div class="tg"><span class="tg-l">${l}</span>${ts.map(t=>`<button class="tool" type="button" data-tool="${t}" aria-pressed="${t===tool}" title="${esc(T[t]?T[t].n:SHORT[t])}">${svgSym(t)}<span>${SHORT[t]}</span></button>`).join('')}</div>`).join('');
 }
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(!b)return;setTool(b.dataset.tool)});
-function setTool(t){tool=t;if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
+function setTool(t){tool=t;if(t!=='scris')txStrokes=[];if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
 function renderLayers(){
   const L=[['routes','Trasee'],['boxes','Doze'],['tags','Circuite'],['dims','Cote']];
   $('#layers').innerHTML=L.map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
@@ -1632,6 +1675,7 @@ let inspOpen=false;
 function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector()}
 function renderSelbar(){
   const el=$('#selbar');if(!el)return;
+  if(tool==='scris'){el.innerHTML=`<span class="tag">${svgSym('scris')}<span>${txBusy?'Citesc scrisul…':txStrokes.length?'Când ai terminat de scris, apasă Redenumește.':'Scrie cu penul numele în chenarul camerei, de exemplu „Dormitor 1”.'}</span></span>${txStrokes.length&&!txBusy?'<button class="btn pri" type="button" data-sb="tx-ok">Redenumește</button><button class="btn" type="button" data-sb="tx-clear">Șterge scrisul</button>':''}<button class="btn" type="button" data-sb="done">Gata</button>`;return}
   if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='schita'?(P.sketch.length||P.sketchErase.length?`${P.sketch.length} ${P.sketch.length===1?'linie':'linii'} desenate${P.sketchErase.length?', '+P.sketchErase.length+' '+(P.sketchErase.length===1?'perete șters':'pereți șterși'):''}. Continuă sau generează planul.`:'Desenează cu penul conturul casei și pereții dintre camere, ca pe hârtie.'):tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':JBT[tool]?'Atinge un perete ca să pui doza de '+JB[JBT[tool]].lbl+'. Traseele din cameră vor trece prin ea.':tool==='gol'?'Atinge peretele și trage pe porțiunea care lipsește':tool==='rez'?'Atinge peretele de rezistență și trage de-a lungul lui':tool==='grinda'?'Trage pe plan de-a lungul grinzii':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span>${tool==='schita'?(`<button class="btn${skErase?'':' pri'}" type="button" data-sb="sk-pen" aria-pressed="${!skErase}">Creion</button><button class="btn${skErase?' pri':''}" type="button" data-sb="sk-erase" aria-pressed="${skErase}">Radieră</button>`)+(P.sketch.length||P.sketchErase.length?'<button class="btn" type="button" data-sb="sk-undo">↶ Ultima linie</button><button class="btn dng" type="button" data-sb="sk-clear">Șterge schița</button><button class="btn pri" type="button" data-sb="sk-gen">Generează planul</button>':''):'<button class="btn pri" type="button" data-sb="done">Gata, editez</button>'}`;return}
   if(!sel){el.innerHTML=`<span class="tag muted">Atinge un element ca să-l editezi</span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde':'Proiect și circuite'}</button>`;return}
   if(sel.kind==='seg'||sel.kind==='node'){
@@ -1721,6 +1765,8 @@ $('#selbar').addEventListener('click',e=>{
   const b=e.target.closest('[data-sb]');if(!b)return;
   if(b.dataset.sb==='del')deleteSel();
   else if(b.dataset.sb==='done')setTool('select');
+  else if(b.dataset.sb==='tx-ok')recognizeName();
+  else if(b.dataset.sb==='tx-clear'){txStrokes=[];renderSelbar();draw()}
   else if(b.dataset.sb==='sk-pen'){skErase=false;eraseHover=null;renderSelbar();draw()}
   else if(b.dataset.sb==='sk-erase'){skErase=true;renderSelbar();draw()}
   else if(b.dataset.sb==='sk-undo'){snap();P.sketch.pop();changed();renderSelbar()}
