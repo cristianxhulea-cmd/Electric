@@ -251,6 +251,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
           <button class="btn ic" id="rot90" type="button" title="Rotește planul cu 90°" aria-label="Rotește planul cu 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
           <button class="btn" id="rotReset" type="button" hidden>Îndreaptă</button>
           <span class="scale" id="scaleLbl"></span>
+          <select id="lvSel" class="chipsel on" aria-label="Nivel"></select>
           <select id="isoSel" class="chipsel" aria-label="Arată traseul"></select>
           <div class="layers" id="layers"></div>
           <button class="btn" id="focusBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">Ecran mare</span></button>
@@ -325,12 +326,13 @@ const T={
   ac:{n:'Aer condiționat',g:'ded',w:2600,h:2.2,code:'AC',conn:'racord',curve:'C',cos:.9},
   boiler:{n:'Boiler electric',g:'ded',w:2000,h:1.8,code:'BOI',conn:'racord'},
   ded:{n:'Consumator dedicat',g:'ded',w:2000,h:.6,code:'D',conn:'racord'},
+  trecere:{n:'Trecere între niveluri',g:'aux',w:0,h:0,code:'TR'},
   tablou:{n:'Tablou electric',g:'tab',w:0,h:1.6,code:'TE'}
 };
-const TOOLS=[['Plan',['select','schita','room','usa','geam','gol']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou']]];
+const TOOLS=[['Plan',['select','schita','room','usa','geam','gol']],['Structură',['rez','grinda']],['Doze',['dozaS','dozaM','dozaL']],['Prize',['priza','priza2','prizaM','prizaip','tv']],['Iluminat',['lumina','spot','aplica','intr','intr2']],['Consumatori',['msr','msv','cuptor','plita','ac','boiler','ded']],['Alimentare',['tablou','trecere']]];
 const JB={s:{n:'Doză Ø80',cap:4,lbl:'Ø80 mm',k:5},m:{n:'Doză 100×100',cap:6,lbl:'100×100 mm',k:6},l:{n:'Doză 160×100',cap:10,lbl:'160×100 mm',k:8},xl:{n:'Doză 200×150',cap:16,lbl:'200×150 mm',k:10}};
 const JBT={dozaS:'s',dozaM:'m',dozaL:'l'};
-const SHORT={schita:'Schiță',gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
+const SHORT={trecere:'Trecere nivel',schita:'Schiță',gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
 const RT={living:'Living',dormitor:'Dormitor',bucatarie:'Bucătărie',baie:'Baie',hol:'Hol',birou:'Birou',debara:'Debara',altul:'Altă cameră'};
 const ST={todo:'De făcut',doing:'În lucru',done:'Finalizat'};
 const KEY='electroplan.v1';
@@ -490,7 +492,7 @@ function structChecks(p,out,z){
   }
   const msg={str:'străpunge un perete de rezistență',slit:'merge în lungul unui perete de rezistență (șliț)',gr:'traversează o grindă'};
   const fix={str:'Ocolește prin alt perete sau cere acordul proiectantului de structură.',slit:'Mută traseul pe alt perete sau montează-l aparent, în canal.',gr:'Nu găuri grinda: treci pe sub ea, aparent, sau mută traseele în pardoseală.'};
-  for(const k of Object.keys(per)){const[ci,kind]=k.split('|');out.warn.push(`C${+ci+1}: ${msg[kind]}${per[k]>1?` (${per[k]}×)`:''}. ${fix[kind]}`)}
+  for(const k of Object.keys(per)){const[ci,kind]=k.split('|');out.warn.push(`${(out.circuits[+ci]||{}).id||'C'+(+ci+1)}: ${msg[kind]}${per[k]>1?` (${per[k]}×)`:''}. ${fix[kind]}`)}
 }
 function winChecks(p,out){
   const ws=p.wins||[];let nf=0;
@@ -530,7 +532,7 @@ function doorChecks(p,out){
 const clampIn=(r,q,m)=>({x:clamp(q.x,r.x+m,r.x+r.w-m),y:clamp(q.y,r.y+m,r.y+r.h-m)});
 
 function blank(name){return{id:uid(),name:name||'Proiect nou',client:'',adresa:'',telefon:'',start:'',H:2.6,route:'tavan',cable:'CYY-F',reserve:10,maxPrize:8,maxLum:10,ks:.4,spd:true,swOff:.2,rooms:[],items:[],doors:[],wins:[],struct:[],routes:{},boxes:{},jb:[],sketch:[],tasks:[],prices:{}}}
-const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(!Array.isArray(p.wins))p.wins=[];if(!Array.isArray(p.struct))p.struct=[];if(!p.routes||typeof p.routes!=='object')p.routes={};if(!p.boxes||typeof p.boxes!=='object')p.boxes={};if(!Array.isArray(p.jb))p.jb=[];if(!Array.isArray(p.sketch))p.sketch=[];if(p.swOff==null)p.swOff=.2;return p};
+const norm=p=>{if(!Array.isArray(p.doors))p.doors=[];if(!Array.isArray(p.wins))p.wins=[];if(!Array.isArray(p.struct))p.struct=[];if(!p.routes||typeof p.routes!=='object')p.routes={};if(!p.boxes||typeof p.boxes!=='object')p.boxes={};if(!Array.isArray(p.jb))p.jb=[];if(!Array.isArray(p.sketch))p.sketch=[];if(!Array.isArray(p.levels)||!p.levels.length){p.levels=[{id:'L0',name:'Parter',elev:0}];p.lvCur='L0'}if(!p.lvData||typeof p.lvData!=='object')p.lvData={};if(!p.levels.some(l=>l.id===p.lvCur))p.lvCur=p.levels[0].id;if(p.swOff==null)p.swOff=.2;return p};
 function sample(){
   const p=blank('Exemplu — apartament 3 camere');
   p.client='Exemplu (date fictive)';p.adresa='Str. Exemplu nr. 1, ap. 4';
@@ -602,7 +604,7 @@ function onRemote(snap){
   const keep=store.projects.find(x=>x.id===P.id);
   if(!keep){P=store.projects.find(x=>x.id===store.current)||store.projects[0];cur=true}else if(cur)P=keep;
   persist();renderProjSel();
-  if(cur){undoS=[];redoS=[];sel=null;editTask=null;R=compute(P);fit();changed(true)}
+  if(cur){undoS=[];redoS=[];sel=null;editTask=null;R=computeLv();fit();changed(true)}
   if(!cloud.busy&&!cloud.queue.size)setSync('ok');
 }
 async function connectCloud(){
@@ -618,11 +620,11 @@ function replaceP(q){const i=store.projects.findIndex(x=>x.id===P.id);store.proj
 function undo(){if(!undoS.length)return;redoS.push(JSON.stringify(P));replaceP(JSON.parse(undoS.pop()));sel=null;changed(true)}
 function redo(){if(!redoS.length)return;undoS.push(JSON.stringify(P));replaceP(JSON.parse(redoS.pop()));sel=null;changed(true)}
 
-function compute(p){
+function compute(p,o={}){
   const out={circuits:[],segs:[],nodes:[],warn:[],by:{},rcds:[],tot:null,flag:{},hits:[],phys:[],chase:{}};
   doorChecks(p,out);
   winChecks(p,out);
-  const tbs=p.items.filter(i=>i.type==='tablou');
+  const tbs0=p.items.filter(i=>i.type==='tablou'),tbs=tbs0.length?tbs0:o.virt?[o.virt]:[];if(!tbs0.length&&o.virt)out.virt=o.virt;
   if(!p.rooms.length)out.warn.push('Desenează cel puțin o cameră.');
   if(!tbs.length){out.warn.push('Plasează tabloul electric pe plan ca să calculez traseele, circuitele și materialele.');return out}
   if(tbs.length>1)out.warn.push('Sunt mai multe tablouri pe plan. Calculul folosește primul tablou plasat.');
@@ -665,7 +667,7 @@ function compute(p){
   for(const r of rooms)for(const it of inRoom(r,['ded']))ded.push({kind:'ded',parts:[{r,items:[it]}],n:1});
   const used=[],shared={},baths=p.rooms.filter(r=>r.type==='baie');
   [...lum,...pr,...ded].forEach((s,k)=>{
-    const id='C'+(k+1),ci=k;
+    const id=(o.pre||'')+'C'+(k+1+(o.base||0)),ci=k;
     let a={x:tb.x,y:tb.y},ah=tz,cum=0,len=0,Lmax=0,pk='TE';
     const F=baths.filter(r=>!s.parts.some(x=>x.r.id===r.id));
     const add=(fr,fh,to,th,feed,key)=>{
@@ -686,6 +688,7 @@ function compute(p){
       for(const it of part.items){const l=add(d,z,it,hOf(p,it),false,nk+'>'+it.id);Lmax=Math.max(Lmax,cum+l)}
       a=d;ah=z;pk=nk;
     }
+    Lmax+=o.ex||0;len+=o.ex||0;
     const items=s.parts.flatMap(x=>x.items),t0=T[items[0].type];
     const P=items.reduce((t,i)=>t+wOf(i),0),cos=s.kind==='ded'?(t0.cos||1):1,Ib=P/(U*cos);
     const minIn=s.kind==='lum'?10:16,In=STD.find(v=>v>=Math.max(Ib,minIn))||63;
@@ -706,17 +709,52 @@ function compute(p){
   let di=0;for(const q of phys.values()){q.id='D'+(++di);const j=q.jb&&p.jb.find(x=>x.id===q.jb);q.size=j?j.size:(['s','m','l','xl'].find(k=>JB[k].cap>=q.cab)||'xl');if(j&&q.cab>JB[j.size].cap)out.warn.push(`${q.id} (${JB[j.size].n}, ${q.room}): intră ${q.cab} cabluri, iar capacitatea recomandată e ${JB[j.size].cap}. Alege o doză mai mare.`)}
   out.nodes.forEach(n=>n.id=phys.get(n.ph).id);out.phys=[...phys.values()];out.chase=chaseOf(p,out,z);
   structChecks(p,out,z);
-  const prot=out.circuits.filter(c=>c.kind!=='lum'||c.bath);
-  for(let k=0;k<prot.length;k+=4){const g=prot.slice(k,k+4),rid='ΔI'+(out.rcds.length+1);g.forEach(c=>c.rcd=rid);out.rcds.push({id:rid,circuits:g})}
-  const Pi=out.circuits.reduce((t,c)=>t+c.P,0),ks=clamp(+p.ks||.4,.1,1),Pc=Pi*ks,Ic=Pc/U;
-  const maxIn=out.circuits.reduce((m,c)=>Math.max(m,c.In),0);
-  const main=MAINS.find(v=>v>=Ic&&v>maxIn)||null;
-  if(!main&&out.circuits.length)out.warn.push(`Curentul cerut (${f(Ic)} A) depășește 63 A pe monofazic. Ia în calcul un branșament trifazic.`);
-  const mods=2+(p.spd?2:0)+2*out.rcds.length+out.circuits.length;
-  const panel=PANELS.find(v=>v>=Math.ceil(mods*1.2))||72;
-  out.tot={Pi,ks,Pc,Ic,main,mods,panel,z};
+  const fb=finishBoard(p,out.circuits);out.rcds=fb.rcds;out.tot={...fb.tot,z};out.warn.push(...fb.warn);
   return out;
 }
+function finishBoard(p,circs){
+  const rcds=[],warn=[],prot=circs.filter(c=>(c.kind!=='lum'||c.bath)&&c.kind!=='feed');
+  for(let k=0;k<prot.length;k+=4){const g=prot.slice(k,k+4),rid='ΔI'+(rcds.length+1);g.forEach(c=>c.rcd=rid);rcds.push({id:rid,circuits:g})}
+  const Pi=circs.reduce((t,c)=>t+c.P,0),ks=clamp(+p.ks||.4,.1,1),Pc=Pi*ks,Ic=Pc/U;
+  const maxIn=circs.reduce((m,c)=>Math.max(m,c.In),0),main=MAINS.find(v=>v>=Ic&&v>maxIn)||null;
+  if(!main&&circs.length)warn.push(`Curentul cerut (${f(Ic)} A) depășește 63 A pe monofazic. Ia în calcul un branșament trifazic.`);
+  const mods=2+(p.spd?2:0)+2*rcds.length+circs.length,panel=PANELS.find(v=>v>=Math.ceil(mods*1.2))||72;
+  return{rcds,warn,tot:{Pi,ks,Pc,Ic,main,mods,panel}};
+}
+const LVK=['rooms','items','doors','wins','struct','jb','sketch','routes','boxes'];
+function lvGet(p,id){if(id===p.lvCur){const o={};LVK.forEach(k=>o[k]=p[k]);return o}const d=(p.lvData||{})[id]||{},o={};LVK.forEach(k=>o[k]=d[k]||(k==='routes'||k==='boxes'?{}:[]));return o}
+const lvView=(p,id)=>({...p,...lvGet(p,id)});
+const lvSorted=p=>p.levels.slice().sort((a,b)=>(+a.elev||0)-(+b.elev||0));
+let RA=null;
+function computeAll(p){
+  const views=lvSorted(p).map(l=>({l,v:lvView(p,l.id)})),hasTb=x=>x.v.items.some(i=>i.type==='tablou');
+  const res=[],boards=[],mainV=views.find(hasTb);
+  if(!mainV){for(const x of views)res.push({id:x.l.id,l:x.l,R:compute(x.v)});return{levels:res,boards}}
+  const mtb=mainV.v.items.find(i=>i.type==='tablou'),Rm=compute(mainV.v);
+  res.push({id:mainV.l.id,l:mainV.l,R:Rm});Rm.circuits.forEach(c=>c.lv=mainV.l.id);
+  const mainB={l:mainV.l,tb:mtb,circuits:[...Rm.circuits],levels:[mainV.l.id]};boards.push(mainB);
+  let base=Rm.circuits.length;
+  for(const x of views){
+    if(x===mainV)continue;
+    if(hasTb(x)){const pre='T'+(boards.length+1)+'.',Rx=compute(x.v,{pre});Rx.circuits.forEach(c=>c.lv=x.l.id);res.push({id:x.l.id,l:x.l,R:Rx});boards.push({l:x.l,tb:x.v.items.find(i=>i.type==='tablou'),circuits:[...Rx.circuits],levels:[x.l.id],pre});continue}
+    const tr=x.v.items.find(i=>i.type==='trecere'),pt=tr?{x:tr.x,y:tr.y}:{x:mtb.x,y:mtb.y};
+    const ex=Math.abs(pt.x-mtb.x)+Math.abs(pt.y-mtb.y)+Math.abs((+x.l.elev||0)-(+mainV.l.elev||0)-hOf(p,mtb));
+    const Rx=compute(x.v,{base,ex,virt:{id:'__v',type:'tablou',x:pt.x,y:pt.y,h:0,room:null}});
+    Rx.circuits.forEach(c=>c.lv=x.l.id);res.push({id:x.l.id,l:x.l,R:Rx});mainB.circuits.push(...Rx.circuits);mainB.levels.push(x.l.id);base+=Rx.circuits.length;
+  }
+  for(const b of boards.slice(1)){
+    const bt=finishBoard(p,b.circuits),Ib=bt.tot.Pc/U,In=STD.find(v=>v>=Math.max(Ib,bt.tot.main||16))||63;
+    const len=Math.abs(b.tb.x-mtb.x)+Math.abs(b.tb.y-mtb.y)+Math.abs((+b.l.elev||0)+hOf(p,b.tb)-(+mainV.l.elev||0)-hOf(p,mtb))+1;
+    let S=SECTS.find(v=>IZ[v]>=In&&v>=2.5)||16;const du=S=>200*len*Ib/(GAMMA*S*U);while(du(S)>3&&S<16)S=SECTS[SECTS.indexOf(S)+1];
+    const k=mainB.circuits.length;
+    const fc={id:'C'+(k+1),ci:k,kind:'feed',lv:mainV.l.id,name:'Alimentare tablou '+b.l.name,where:b.l.name,items:[],n:0,P:bt.tot.Pi,Ib,In,curve:'C',S,cable:`${p.cable} 3×${fS(S)}`,len,Lmax:len,du:du(S),lim:3,rcd:null,tube:S<=2.5?16:S<=4?20:25};
+    mainB.circuits.push(fc);b.feed=fc;
+  }
+  for(const b of boards){const bt=finishBoard(p,b.circuits);Object.assign(b,bt)}
+  for(const r of res){const b=boards.find(q=>q.levels.includes(r.id));if(b){r.R.board=b;r.R.rcds=b.rcds;r.R.tot={...b.tot,z:r.R.tot?r.R.tot.z:(p.route==='pardoseala'?0:p.H-.3)}}}
+  return{levels:res,boards};
+}
+function computeLv(){RA=computeAll(P);const x=RA.levels.find(q=>q.id===P.lvCur);return x?x.R:compute(P)}
 
 function modBoxes(m){if(m<=0)return[];if(m<=2)return[2];if(m<=3)return[3];if(m<=4)return[4];if(m<=7)return[7];return[7,...modBoxes(m-7)]}
 function devInfo(p,it){
@@ -737,7 +775,7 @@ function devInfo(p,it){
   return{mods,mech,cls,ck,cn,cu,boxes:modBoxes(mods),st};
 }
 function pms0(p){return p.items.filter(i=>i.type==='prizaM'&&p.rooms.some(x=>x.id===i.room)).reduce((t,i)=>t+nOf(i),0)}
-function materials(p,r){
+function materials(p,r,o={}){
   const m=new Map();
   const add=(cat,key,name,um,q)=>{if(!q)return;const o=m.get(key);if(o)o.q+=q;else m.set(key,{cat,key,name,um,q})};
   const cnt=t=>p.items.filter(i=>i.type===t&&p.rooms.some(x=>x.id===i.room)).length;
@@ -757,7 +795,7 @@ function materials(p,r){
   add('Iluminat','il:s','Spot încastrat','buc',cnt('spot'));
   add('Iluminat','il:a','Aplică de perete','buc',cnt('aplica'));
   const t=r.tot;
-  if(t&&r.circuits.length){
+  if(t&&r.circuits.length&&!o.noBoard){
     add('Tablou electric','tb:box',`Tablou electric îngropat ${t.panel} module`,'buc',1);
     if(t.main)add('Tablou electric','tb:main',`Disjunctor general 2P C${t.main}`,'buc',1);
     if(p.spd)add('Tablou electric','tb:spd','Descărcător de supratensiune T2 1P+N','buc',1);
@@ -769,15 +807,15 @@ function materials(p,r){
   const pts=p.items.filter(i=>i.type!=='tablou'&&r.by[i.id]).length;
   for(const m of Object.keys(WM)){const c=r.chase[m];if(!c)continue;add('Manoperă','man:slit:'+m,`Șlițuire în ${WM[m]} (tăiere, montaj tub, astupare)`,'m',c.m);add('Manoperă','man:dz:'+m,`Frezare locaș doză în ${WM[m]}`,'buc',c.dz)}
   add('Manoperă','man:pct','Manoperă — punct electric','buc',pts);
-  if(t&&r.circuits.length)add('Manoperă','man:tb','Manoperă — echipare și conectare tablou','buc',1);
+  if(t&&r.circuits.length&&!o.noBoard)add('Manoperă','man:tb','Manoperă — echipare și conectare tablou','buc',1);
   const out=[...m.values()];
   out.forEach(x=>{x.q=x.um==='m'?Math.ceil(x.q):Math.round(x.q)});
   const order=['Cabluri','Tuburi și doze','Aparataj','Iluminat','Curenți slabi','Tablou electric','Manoperă'];
   return out.sort((a,b)=>order.indexOf(a.cat)-order.indexOf(b.cat));
 }
 
-function genTasks(p,r){
-  const mats=materials(p,r),q=k=>(mats.find(x=>x.key===k)||{q:0}).q;
+function genTasks(p,r,M){
+  const mats=M||materials(p,r),q=k=>(mats.find(x=>x.key===k)||{q:0}).q;
   const tub=mats.filter(x=>x.key.startsWith('tub:')).reduce((t,x)=>t+x.q,0);
   const doze=mats.filter(x=>x.key.startsWith('doza:')).reduce((t,x)=>t+x.q,0);
   const pr=p.items.filter(i=>T[i.type].g==='priza'&&r.by[i.id]).length,ii=p.items.filter(i=>T[i.type].g==='intr'&&r.by[i.id]).length,ll=q('il:l')+q('il:s')+q('il:a');
@@ -818,7 +856,8 @@ function txt(s,X,Y,size,wt,col,al){ctx.font=`${wt||500} ${size}px "IBM Plex Mono
 function sym(type,X,Y,r,col,ghost,code){
   const t=T[type];ctx.save();if(ghost)ctx.globalAlpha=.5;ctx.lineWidth=1.7;ctx.strokeStyle=col;ctx.fillStyle=C.canvas;
   const circ=rr=>{ctx.beginPath();ctx.arc(X,Y,rr,0,Math.PI*2);ctx.fill();ctx.stroke()};
-  if(type==='tablou'){const w=r*2.8,h=r*1.5;ctx.fillStyle=C.ink;ctx.fillRect(X-w/2,Y-h/2,w,h);txt('TE',X,Y+.5,r*.95,600,C.canvas)}
+  if(t.g==='aux'){ctx.beginPath();ctx.arc(X,Y,r,0,Math.PI*2);ctx.fill();ctx.setLineDash([3,2]);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(X,Y-r*.6);ctx.lineTo(X,Y+r*.6);ctx.moveTo(X-r*.35,Y-r*.25);ctx.lineTo(X,Y-r*.6);ctx.lineTo(X+r*.35,Y-r*.25);ctx.moveTo(X-r*.35,Y+r*.25);ctx.lineTo(X,Y+r*.6);ctx.lineTo(X+r*.35,Y+r*.25);ctx.stroke()}
+  else if(type==='tablou'){const w=r*2.8,h=r*1.5;ctx.fillStyle=C.ink;ctx.fillRect(X-w/2,Y-h/2,w,h);txt('TE',X,Y+.5,r*.95,600,C.canvas)}
   else if(t.g==='ded'){const s=r*1.3;ctx.beginPath();ctx.roundRect?ctx.roundRect(X-s,Y-s*.75,s*2,s*1.5,3):ctx.rect(X-s,Y-s*.75,s*2,s*1.5);ctx.fill();ctx.stroke();txt(t.code,X,Y+.5,t.code.length>2?r*.72:r*.9,600,col)}
   else if(t.g==='priza'){const cd=code||t.code;circ(r);txt(cd,X,Y+.5,cd.length>1?r*.8:r*1.05,600,col)}
   else if(type==='spot'){circ(r*.72);ctx.beginPath();ctx.arc(X,Y,r*.26,0,Math.PI*2);ctx.fillStyle=col;ctx.fill()}
@@ -836,6 +875,7 @@ function draw(){
   ctx.lineWidth=1;
   for(let x=gx0;sx(x)<=W+GM;x+=step){const mj=Math.abs(x/maj-Math.round(x/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const X=Math.round(sx(x))+.5;ctx.beginPath();ctx.moveTo(X,-GM);ctx.lineTo(X,Hh+GM);ctx.stroke()}
   for(let y=gy0;sy(y)<=Hh+GM;y+=step){const mj=Math.abs(y/maj-Math.round(y/maj))<1e-6;ctx.strokeStyle=mj?C.grid2:C.grid;const Y=Math.round(sy(y))+.5;ctx.beginPath();ctx.moveTo(-GM,Y);ctx.lineTo(W+GM,Y);ctx.stroke()}
+  {const ls=lvSorted(P),ix=ls.findIndex(l=>l.id===P.lvCur),bl=ix>0?ls[ix-1]:null;if(bl){const gr=lvGet(P,bl.id).rooms;ctx.save();ctx.strokeStyle=C.muted;ctx.globalAlpha=.55;ctx.lineWidth=1.5;ctx.setLineDash([6,5]);for(const r of gr)ctx.strokeRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s);ctx.restore()}}
   for(const r of P.rooms){ctx.fillStyle=C.room;ctx.fillRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s)}
   ctx.lineWidth=clamp(view.s*.1,2,7);ctx.strokeStyle=C.wall;ctx.lineJoin='miter';
   for(const r of P.rooms)ctx.strokeRect(sx(r.x),sy(r.y),r.w*view.s,r.h*view.s);
@@ -879,6 +919,7 @@ function draw(){
   }
   if(R&&R.hits.length){const bad=getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();for(const h of R.hits){if(iso&&h.ci!==iso.ci)continue;const X=sx(h.x),Y=sy(h.y);ctx.strokeStyle=bad;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(X,Y,7,0,Math.PI*2);ctx.moveTo(X-4,Y-4);ctx.lineTo(X+4,Y+4);ctx.moveTo(X+4,Y-4);ctx.lineTo(X-4,Y+4);ctx.stroke()}}
   const r0=clamp(view.s*.15,7,13);
+  if(R&&R.virt&&!P.items.some(i=>i.type==='trecere')){const X=sx(R.virt.x),Y=sy(R.virt.y);sym('trecere',X,Y,r0,C.accent);txt('din tabloul '+((R.board&&R.board.l.name)||''),X+r0+4,Y+r0+6,10,600,C.accent,'left')}
   for(const it of P.items){
     const cid=R&&R.by[it.id],col=it.type==='tablou'?C.ink:cid?colOf(cid):C.muted,X=sx(it.x),Y=sy(it.y);
     const dim=iso&&it.type!=='tablou'&&cid!==iso.id;if(dim)ctx.globalAlpha=.22;
@@ -1254,14 +1295,14 @@ cv.addEventListener('pointermove',e=>{
       const onV=d.o==='v'&&(Math.abs(d.c-r.x)<.02||Math.abs(d.c-r.x-r.w)<.02)&&dt>o.y-1e-6&&dt<o.y+o.h+1e-6;
       if(onH||onV){const[lo,hi]=onH?[r.x,r.x+r.w]:[r.y,r.y+r.h],a=lo+d.w/2+.1,b=hi-d.w/2-.1;d.t=a>b?(lo+hi)/2:clamp(dt,a,b)}
     }
-    R=compute(P);draw();renderDyn();return;
+    R=computeLv();draw();renderDyn();return;
   }
   if(g.k==='pan'){if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<(e.pointerType==='mouse'?5:10))return;g.moved=true;view.auto=false;view.ox=g.ox+X-g.X;view.oy=g.oy+Y-g.Y;draw();return}
   if(g.k==='moveItem'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     if(!g.moved){snap();g.moved=true}
     const it=P.items.find(i=>i.id===g.id);if(!it)return;const q=placePt(it.type,x,y);it.x=q.x;it.y=q.y;if(q.room)it.room=q.room;
-    R=compute(P);draw();return;
+    R=computeLv();draw();return;
   }
   if(g.k==='moveRoom'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
@@ -1270,14 +1311,14 @@ cv.addEventListener('pointermove',e=>{
     const q=snapRoomPt(g.rx+x-g.x0,g.ry+y-g.y0),dx=q.x-g.rx,dy=q.y-g.ry;
     r.x=g.rx+dx;r.y=g.ry+dy;g.its.forEach(([i,ix,iy])=>{i.x=r05(ix+dx);i.y=r05(iy+dy)});
     (g.kids||[]).forEach(([k,kx,ky])=>{k.x=kx+dx;k.y=ky+dy});(g.gols||[]).forEach(([q,c,a,b])=>{const dc=q.o==='h'?dy:dx,dt=q.o==='h'?dx:dy;q.c=c+dc;q.a=a+dt;q.b=b+dt});
-    R=compute(P);draw();return;
+    R=computeLv();draw();return;
   }
   if(g.k==='room'){const q=snapRoomPt(x,y);g.x1=q.x;g.y1=q.y;draw();return}
   if(g.k==='sketch'){const l=g.pts[g.pts.length-1];if(Math.hypot(x-l.x,y-l.y)*view.s>3){g.pts.push({x,y});draw()}return}
   if(g.k==='st'){g.x=x;g.y=y;draw();return}
   if(g.k==='moveJb'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;if(!g.moved){snap();g.moved=true}
-    const j=P.jb.find(i=>i.id===g.id),q=jbPt(x,y);if(j&&q){j.x=q.x;j.y=q.y;j.room=q.room}R=compute(P);draw();return;
+    const j=P.jb.find(i=>i.id===g.id),q=jbPt(x,y);if(j&&q){j.x=q.x;j.y=q.y;j.room=q.room}R=computeLv();draw();return;
   }
   if(g.k==='leg'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;if(!g.moved){snap();g.moved=true}
@@ -1285,25 +1326,25 @@ cv.addEventListener('pointermove',e=>{
     const setc=q=>g.o==='h'?{x:q.x,y:v}:{x:v,y:q.y};
     const A=i===0?[b[0],setc(b[0])]:[setc(b[i])],Bp=i+1===n-1?[setc(b[n-1]),b[n-1]]:[setc(b[i+1])];
     pts=[...b.slice(0,i),...A,...Bp,...b.slice(i+2)];
-    P.routes[g.key]=pts.slice(1,-1);R=compute(P);draw();return;
+    P.routes[g.key]=pts.slice(1,-1);R=computeLv();draw();return;
   }
   if(g.k==='node'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;if(!g.moved){snap();g.moved=true}
     const r=P.rooms.find(q=>q.id===g.room);if(!r)return;
     const c=[[Math.abs(y-r.y),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y}],[Math.abs(y-r.y-r.h),{x:clamp(r05(x),r.x+.1,r.x+r.w-.1),y:r.y+r.h}],[Math.abs(x-r.x),{x:r.x,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}],[Math.abs(x-r.x-r.w),{x:r.x+r.w,y:clamp(r05(y),r.y+.1,r.y+r.h-.1)}]].sort((a,b)=>a[0]-b[0])[0][1];
-    P.boxes[g.key]=c;R=compute(P);draw();return;
+    P.boxes[g.key]=c;R=computeLv();draw();return;
   }
   if(g.k==='moveWin'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     const w=P.wins.find(i=>i.id===g.id);if(!w)return;const q=placeWin(x,y,w);if(!q)return;
     if(!g.moved){snap();g.moved=true}
-    w.o=q.o;w.c=q.c;w.t=q.t;R=compute(P);draw();return;
+    w.o=q.o;w.c=q.c;w.t=q.t;R=computeLv();draw();return;
   }
   if(g.k==='moveDoor'){
     if(!g.moved&&Math.hypot(X-g.X,Y-g.Y)<5)return;
     const d=P.doors.find(i=>i.id===g.id);if(!d)return;const q=placeDoor(x,y,d);if(!q)return;
     if(!g.moved){snap();g.moved=true}
-    if(q.o!==d.o||q.c!==d.c)d.s=q.s;d.o=q.o;d.c=q.c;d.t=q.t;R=compute(P);draw();return;
+    if(q.o!==d.o||q.c!==d.c)d.s=q.s;d.o=q.o;d.c=q.c;d.t=q.t;R=computeLv();draw();return;
   }
   if(g.k==='place'){g.x=x;g.y=y;draw()}
 });
@@ -1361,6 +1402,7 @@ const ICON={
   dozaS:'<rect x="11" y="11" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11l10 10M21 11 11 21" stroke="currentColor" stroke-width="1.2"/>',
   dozaM:'<rect x="8" y="8" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8l16 16M24 8 8 24" stroke="currentColor" stroke-width="1.2"/>',
   dozaL:'<rect x="4" y="7" width="24" height="18" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l24 18M28 7 4 25" stroke="currentColor" stroke-width="1.2"/>',
+  trecere:'<circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"/><path d="M16 9v14M12 13l4-4 4 4M12 19l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2"/>',
   schita:'<path d="M5 25c2-6 1-13 3-18 5 1 12-1 18 1-1 5 1 12-1 17-6-1-13 1-20 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-dasharray="3 2"/><path d="M22 21l5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   gol:'<path d="M2 16h8M22 16h8" stroke="currentColor" stroke-width="4"/><path d="M10 11v10M22 11v10" stroke="currentColor" stroke-width="2"/><path d="M12 16h8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/>',
   rez:'<rect x="3" y="12" width="26" height="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 20l8-8M12 20l8-8M18 20l8-8" stroke="currentColor" stroke-width="1.5"/>',
@@ -1467,6 +1509,8 @@ function renderInspector(){
   }else{
     h=`<div><h2>${esc(P.name)}</h2><p class="sub">Atinge o cameră sau un element ca să-l editezi.</p></div>
     <div id="insDyn"></div>
+    <div><h4>Niveluri</h4><ul class="dchk">${lvSorted(P).map(l=>`<li><div class="fields"><label class="f">Nume<input data-lvf="name" data-lid="${l.id}" id="lv-n-${l.id}" value="${esc(l.name)}"></label><label class="f">Cota pardoselii (m)<input data-lvf="elev" data-lid="${l.id}" id="lv-e-${l.id}" type="number" inputmode="decimal" step=".05" value="${l.elev}"></label></div><div class="bar">${l.id===P.lvCur?'<span class="muted" style="font-size:12px">Nivelul afișat</span>':`<button class="btn" type="button" data-lva="go" data-lid="${l.id}">Deschide</button>`}${P.levels.length>1?`<button class="btn dng" type="button" data-lva="del" data-lid="${l.id}">Șterge nivelul</button>`:''}</div></li>`).join('')}</ul>
+    <div class="bar" style="margin-top:8px"><button class="btn pri" type="button" data-lva="add">+ Nivel nou deasupra</button>${(()=>{const ls=lvSorted(P),ix=ls.findIndex(l=>l.id===P.lvCur);return ix>0&&!P.rooms.length?`<button class="btn" type="button" data-lva="copy">Copiază camerele de la ${esc(ls[ix-1].name)}</button>`:''})()}</div></div>
     <div><h4>Setări proiect</h4><div class="fields">
       <label class="f full">Nume proiect<input data-s="proj" data-f="name" id="p-name" value="${esc(P.name)}"></label>
       <label class="f">Înălțime cameră (m)<input data-s="proj" data-f="H" id="p-H" type="number" inputmode="decimal" min="2" max="5" step=".05" value="${P.H}"></label>
@@ -1618,24 +1662,25 @@ insp.addEventListener('click',e=>{
   deleteSel();
 });
 
-$('#v-calcul').addEventListener('click',e=>{const b=e.target.closest('[data-iso]');if(b)setIso(b.dataset.iso)});
+$('#v-calcul').addEventListener('click',e=>{const b=e.target.closest('[data-iso]');if(!b)return;if(b.dataset.lv&&b.dataset.lv!==P.lvCur)switchLevel(b.dataset.lv);setIso(b.dataset.iso)});
 $('#isoSel').addEventListener('change',e=>setIso(e.target.value));
 function renderCalc(){
-  const t=R.tot,el=$('#v-calcul');
-  if(!t||!R.circuits.length){el.innerHTML=`<div class="wrap"><h1>Circuite și tablou</h1><div class="empty">${esc(R.warn[0]||'Adaugă elemente pe plan.')} Revino aici după ce ai pus prize, lumini și tabloul.</div></div>`;return}
-  const rows=R.circuits.map(c=>`<tr><td><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></td><td>${esc(c.name)}<div class="muted" style="font-size:12px">${esc(c.where)}</div></td><td class="n">${c.n}</td><td class="n">${Math.round(c.P)}</td><td class="n">${f(c.Ib)}</td><td class="n">${c.curve}${c.In}</td><td>${c.rcd||'—'}</td><td class="mono" style="white-space:nowrap">${esc(c.cable)}</td><td class="n">${f(c.len)}</td><td class="n"><span class="pill ${c.du<=c.lim?'ok':'bad'}">${f(c.du,2)} %</span></td><td><button class="btn" type="button" data-iso="${c.id}">Vezi traseul</button></td></tr>`).join('');
-  const mods=[{w:2,cls:'main',a:'General',b:t.main?`C${t.main} 2P`:'trifazic'}];
-  if(P.spd)mods.push({w:2,a:'SPD',b:'T2 1P+N'});
-  R.circuits.filter(c=>c.kind==='lum').forEach(c=>mods.push({w:1,a:c.id,b:c.curve+c.In,col:C.circ[c.ci%8]}));
-  R.rcds.forEach(r=>{mods.push({w:2,cls:'rcd',a:r.id,b:'40A 30mA'});r.circuits.forEach(c=>mods.push({w:1,a:c.id,b:c.curve+c.In,col:C.circ[c.ci%8]}))});
-  const per=t.panel<=18?t.panel:t.panel%18===0&&t.panel>36?18:12;
-  const rowsD=[];let row=[],used=0;
-  for(const m of mods){if(used+m.w>per){rowsD.push(row);row=[];used=0}row.push(m);used+=m.w}
-  rowsD.push(row);while(rowsD.length*per<t.panel)rowsD.push([]);
-  const rail=rowsD.map(r=>{const u=r.reduce((s,m)=>s+m.w,0);return`<div class="row" style="grid-template-columns:repeat(${per},minmax(0,1fr))">${r.map(m=>`<div class="mod ${m.cls||''}" style="grid-column:span ${m.w}">${m.col?`<span class="k" style="background:${m.col}"></span>`:'<span></span>'}<b>${esc(m.a)}</b><small>${esc(m.b)}</small></div>`).join('')}${Array.from({length:per-u},()=>'<div class="mod spare"></div>').join('')}</div>`}).join('');
-  el.innerHTML=`<div class="wrap">
-    <h1>Circuite și tablou</h1>
-    <p class="lede">Calculat automat din plan: ${R.circuits.length} circuite, trasee ${P.route==='tavan'?'orizontale la '+f(t.z,2)+' m (30 cm sub tavan)':'prin pardoseală'}, cablu ${esc(P.cable)} în tub de protecție.</p>
+  const el=$('#v-calcul'),multi=P.levels.length>1,lvN=id=>(P.levels.find(l=>l.id===id)||{}).name||'';
+  if(!RA)R=computeLv();
+  const warns=RA.levels.flatMap(x=>x.R.warn.map(w=>multi?`${x.l.name}: ${w}`:w));
+  if(!RA.boards.length||!RA.boards.some(b=>b.circuits.length)){el.innerHTML=`<div class="wrap"><h1>Circuite și tablou</h1><div class="empty">${esc(warns[0]||'Adaugă elemente pe plan.')} Revino aici după ce ai pus prize, lumini și tabloul.</div></div>`;return}
+  const board=b=>{
+    const t=b.tot;
+    const rows=b.circuits.map(c=>`<tr><td><span class="cid"><span class="dot" style="background:${C.circ[c.ci%8]}"></span>${c.id}</span></td>${multi?`<td>${esc(lvN(c.lv))}</td>`:''}<td>${esc(c.name)}<div class="muted" style="font-size:12px">${esc(c.where)}</div></td><td class="n">${c.n}</td><td class="n">${Math.round(c.P)}</td><td class="n">${f(c.Ib)}</td><td class="n">${c.curve}${c.In}</td><td>${c.rcd||'—'}</td><td class="mono" style="white-space:nowrap">${esc(c.cable)}</td><td class="n">${f(c.len)}</td><td class="n"><span class="pill ${c.du<=c.lim?'ok':'bad'}">${f(c.du,2)} %</span></td><td>${c.kind==='feed'?'':`<button class="btn" type="button" data-iso="${c.id}" data-lv="${c.lv}">Vezi traseul</button>`}</td></tr>`).join('');
+    const mods=[{w:2,cls:'main',a:'General',b:t.main?`C${t.main} 2P`:'trifazic'}];
+    if(P.spd)mods.push({w:2,a:'SPD',b:'T2 1P+N'});
+    b.circuits.filter(c=>!c.rcd).forEach(c=>mods.push({w:1,a:c.id,b:c.curve+c.In,col:C.circ[c.ci%8]}));
+    b.rcds.forEach(r=>{mods.push({w:2,cls:'rcd',a:r.id,b:'40A 30mA'});r.circuits.forEach(c=>mods.push({w:1,a:c.id,b:c.curve+c.In,col:C.circ[c.ci%8]}))});
+    const per=t.panel<=18?t.panel:t.panel%18===0&&t.panel>36?18:12,rowsD=[];let row=[],used=0;
+    for(const m of mods){if(used+m.w>per){rowsD.push(row);row=[];used=0}row.push(m);used+=m.w}
+    rowsD.push(row);while(rowsD.length*per<t.panel)rowsD.push([]);
+    const rail=rowsD.map(r=>{const u=r.reduce((s2,m)=>s2+m.w,0);return`<div class="row" style="grid-template-columns:repeat(${per},minmax(0,1fr))">${r.map(m=>`<div class="mod ${m.cls||''}" style="grid-column:span ${m.w}">${m.col?`<span class="k" style="background:${m.col}"></span>`:'<span></span>'}<b>${esc(m.a)}</b><small>${esc(m.b)}</small></div>`).join('')}${Array.from({length:Math.max(0,per-u)},()=>'<div class="mod spare"></div>').join('')}</div>`}).join('');
+    return`${RA.boards.length>1?`<h2 style="font-size:28px">Tablou ${esc(b.l.name)}${b===RA.boards[0]?' (principal)':''}</h2>`:''}
     <div class="stats">
       <div class="stat"><span>Putere instalată</span><b>${f(t.Pi/1000,2)} kW</b><small>suma receptoarelor</small></div>
       <div class="stat"><span>Putere cerută</span><b>${f(t.Pc/1000,2)} kW</b><small>Ks = ${f(t.ks,2)}</small></div>
@@ -1643,23 +1688,55 @@ function renderCalc(){
       <div class="stat"><span>Disjunctor general</span><b>${t.main?'C'+t.main:'—'}</b><small>2P</small></div>
       <div class="stat"><span>Tablou</span><b>${t.panel} mod.</b><small>${t.mods} ocupate + rezervă</small></div>
     </div>
-    ${R.warn.length?`<ul class="warns">${R.warn.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
-    <h2>Lista circuitelor</h2>
-    <div class="tbl"><table><thead><tr><th>Circuit</th><th>Destinație</th><th class="n">Puncte</th><th class="n">Pi (W)</th><th class="n">Ib (A)</th><th class="n">Protecție</th><th>Diferențial</th><th>Cablu</th><th class="n">Lungime (m)</th><th class="n">ΔU</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h2>Lista circuitelor${RA.boards.length>1?' · '+esc(b.l.name):''}</h2>
+    <div class="tbl"><table><thead><tr><th>Circuit</th>${multi?'<th>Nivel</th>':''}<th>Destinație</th><th class="n">Puncte</th><th class="n">Pi (W)</th><th class="n">Ib (A)</th><th class="n">Protecție</th><th>Diferențial</th><th>Cablu</th><th class="n">Lungime (m)</th><th class="n">ΔU</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h2>Echiparea tabloului${RA.boards.length>1?' · '+esc(b.l.name):''}</h2>
+    <div class="rail-box"><div class="rail">${rail}</div></div>`;
+  };
+  const doze=RA.levels.flatMap(x=>x.R.phys.map(n=>({...n,lvn:x.l.name})));
+  el.innerHTML=`<div class="wrap">
+    <h1>Circuite și tablou</h1>
+    <p class="lede">Calculat automat din plan${multi?` pe ${P.levels.length} niveluri`:''}: ${RA.boards.reduce((t,b)=>t+b.circuits.length,0)} circuite, trasee ${P.route==='tavan'?'orizontale la 30 cm sub tavan':'prin pardoseală'}, cablu ${esc(P.cable)} în tub de protecție.${multi&&RA.boards.length===1?' Nivelurile fără tablou propriu sunt alimentate din tabloul principal, printr-o trecere între niveluri.':''}</p>
+    ${warns.length?`<ul class="warns">${warns.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+    ${RA.boards.map(board).join('')}
     <h2>Doze de derivație</h2>
     <p class="lede" style="margin:-8px 0 0">Poziții pe perete, măsurate de la colțul camerei (stânga pentru pereții de sus și jos, sus pentru cei laterali, privind planul). Dozele de aparataj stau în spatele fiecărei prize și al fiecărui întrerupător, la înălțimea lor de montaj. Când o doză e comună mai multor circuite, fiecare circuit are clemele lui, separate și etichetate, iar nulurile circuitelor nu se leagă între ele, mai ales când sunt pe diferențiale diferite.</p>
-    <div class="tbl"><table><thead><tr><th>Doză</th><th>Mărime</th><th>Circuite</th><th>Cameră</th><th>Perete</th><th class="n">De la colț (m)</th><th class="n">Înălțime (m)</th><th class="n">Cabluri</th></tr></thead><tbody>${R.phys.map(n=>`<tr><td class="mono"><b>${n.id}</b>${n.jb?' <span class="muted" style="font-family:var(--f-body);font-size:12px">pusă de tine</span>':''}</td><td>${JB[n.size].lbl}</td><td>${n.cids.length?n.cids.map((c,i)=>`<span class="cid"><span class="dot" style="background:${C.circ[n.cis[i]%8]}"></span>${c}</span>`).join(' '):'<span class="muted">nefolosită</span>'}</td><td>${esc(n.room)}</td><td>${n.wall?'peretele din '+n.wall:'—'}</td><td class="n">${f(n.dist,2)}</td><td class="n">${f(n.z,2)}</td><td class="n">${n.cab} / ${JB[n.size].cap}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Nu există doze de derivație.</td></tr>'}</tbody></table></div>
-    <h2>Echiparea tabloului</h2>
-    <div class="rail-box"><div class="rail">${rail}</div></div>
+    <div class="tbl"><table><thead><tr><th>Doză</th>${multi?'<th>Nivel</th>':''}<th>Mărime</th><th>Circuite</th><th>Cameră</th><th>Perete</th><th class="n">De la colț (m)</th><th class="n">Înălțime (m)</th><th class="n">Cabluri</th></tr></thead><tbody>${doze.map(n=>`<tr><td class="mono"><b>${n.id}</b>${n.jb?' <span class="muted" style="font-family:var(--f-body);font-size:12px">pusă de tine</span>':''}</td>${multi?`<td>${esc(n.lvn)}</td>`:''}<td>${JB[n.size].lbl}</td><td>${n.cids.length?n.cids.map((c,i)=>`<span class="cid"><span class="dot" style="background:${C.circ[n.cis[i]%8]}"></span>${c}</span>`).join(' '):'<span class="muted">nefolosită</span>'}</td><td>${esc(n.room)}</td><td>${n.wall?'peretele din '+n.wall:'—'}</td><td class="n">${f(n.dist,2)}</td><td class="n">${f(n.z,2)}</td><td class="n">${n.cab} / ${JB[n.size].cap}</td></tr>`).join('')||`<tr><td colspan="${multi?9:8}" class="muted">Nu există doze de derivație.</td></tr>`}</tbody></table></div>
     <p class="note">Secțiunile țin cont de curentul admisibil în tub și de căderea de tensiune maximă de 3 % la iluminat și 5 % la celelalte receptoare (I7-2011). Circuitele de prize și consumatori sunt protejate cu diferențial de 30 mA. Traseele orizontale stau în zona de instalare de sub tavan (15–45 cm), coborârile spre aparate sunt verticale, iar aparatele de lângă uși și ferestre stau la 10–30 cm de toc, cu întrerupătorul pe partea clanței. Sub parapetul ferestrei se pot monta aparate, în dreptul golului nu. Pereții de rezistență și grinzile nu se taie și nu se găuresc fără acordul proiectantului de structură: dozele de derivație se pun pe alți pereți, iar traseele care îi străpung sau trec prin grinzi sunt marcate. Rezultatele sunt orientative: proiectul final se verifică și se semnează de un electrician autorizat ANRE.</p>
   </div>`;
 }
 
+function boardMats(p,b){
+  const L=[],add=(cat,key,name,um,q)=>{if(q)L.push({cat,key,name,um,q})},t=b.tot;if(!t||!b.circuits.length)return L;
+  add('Tablou electric','tb:box:'+t.panel,`Tablou electric îngropat ${t.panel} module`,'buc',1);
+  if(t.main)add('Tablou electric','tb:main:'+t.main,`Disjunctor general 2P C${t.main}`,'buc',1);
+  if(p.spd)add('Tablou electric','tb:spd','Descărcător de supratensiune T2 1P+N','buc',1);
+  add('Tablou electric','tb:rcd','Întrerupător diferențial 2P 40 A 30 mA tip A','buc',b.rcds.length);
+  for(const c of b.circuits)add('Tablou electric',`tb:mcb:${c.curve}${c.In}`,`Siguranță automată 1P+N ${c.curve}${c.In}`,'buc',1);
+  add('Tablou electric','tb:bar','Set bare nul și PE','buc',1);add('Tablou electric','tb:comb','Pieptene de legătură 1P+N','buc',1);
+  if(b.feed){add('Cabluri','cab:'+b.feed.cable,`Cablu ${b.feed.cable} mm²`,'m',Math.ceil(b.feed.len*(1+(+p.reserve||0)/100)));add('Tuburi și doze','tub:'+b.feed.tube,`Tub flexibil de protecție Ø${b.feed.tube} mm`,'m',Math.ceil(b.feed.len*1.05))}
+  add('Manoperă','man:tb','Manoperă — echipare și conectare tablou','buc',1);
+  return L;
+}
+function materialsAll(){
+  if(!RA)R=computeLv();
+  const m=new Map(),addL=L=>{for(const x of L){const q=m.get(x.key);if(q)q.q+=x.q;else m.set(x.key,{...x})}};
+  for(const lv of RA.levels)addL(materials(lvView(P,lv.id),lv.R,{noBoard:RA.boards.length>0}));
+  for(const b of RA.boards)addL(boardMats(P,b));
+  const order=['Cabluri','Tuburi și doze','Aparataj','Iluminat','Curenți slabi','Tablou electric','Manoperă'];
+  return[...m.values()].sort((a,b)=>order.indexOf(a.cat)-order.indexOf(b.cat));
+}
+function genTasksAll(){
+  if(!RA)R=computeLv();
+  const items=RA.levels.flatMap(x=>lvGet(P,x.id).items),by=Object.assign({},...RA.levels.map(x=>x.R.by));
+  const circs=RA.boards.length?RA.boards.flatMap(b=>b.circuits):RA.levels.flatMap(x=>x.R.circuits);
+  return genTasks({...P,items},{circuits:circs,tot:RA.boards[0]?RA.boards[0].tot:null,by},materialsAll());
+}
 function laborBase(p){return p.labor||{}}
 function derivedPrice(p,k){const lb=laborBase(p),mt=k.split(':')[2],mult=+((lb.mult||{})[mt]??WMULT[mt]);if(k.startsWith('man:slit:')&&+lb.slit)return +lb.slit*mult;if(k.startsWith('man:dz:')&&+lb.doza)return +lb.doza*mult;return 0}
 const priceOf=k=>P.prices[k]!=null?+P.prices[k]:derivedPrice(P,k);
 function renderMat(){
-  const el=$('#v-materiale'),L=materials(P,R);
+  const el=$('#v-materiale'),L=materialsAll();
   if(!L.length){el.innerHTML=`<div class="wrap"><h1>Necesar de materiale</h1><div class="empty">Lista apare după ce pui camere, elemente și tabloul pe plan.</div></div>`;return}
   let cat='',body='';
   for(const m of L){
@@ -1685,7 +1762,7 @@ function renderMat(){
   </div>`;
   matTotal(L);
 }
-function matTotal(L){L=L||materials(P,R);const t=L.reduce((s,m)=>s+(priceOf(m.key)||0)*m.q,0);const e=$('#matTot');if(e)e.textContent=t?f(t,2):'—'}
+function matTotal(L){L=L||materialsAll();const t=L.reduce((s,m)=>s+(priceOf(m.key)||0)*m.q,0);const e=$('#matTot');if(e)e.textContent=t?f(t,2):'—'}
 $('#v-materiale').addEventListener('change',e=>{
   const lk=e.target.dataset.lab,mk=e.target.dataset.mult;if(!lk&&!mk)return;
   P.labor=P.labor||{};
@@ -1697,12 +1774,12 @@ $('#v-materiale').addEventListener('change',e=>{
 $('#v-materiale').addEventListener('input',e=>{
   const k=e.target.dataset.pk;if(!k)return;const v=parseFloat(e.target.value);
   if(isFinite(v)&&v>0)P.prices[k]=v;else delete P.prices[k];
-  const L=materials(P,R),m=L.find(x=>x.key===k),c=[...document.querySelectorAll('[data-v]')].find(x=>x.dataset.v===k);
+  const L=materialsAll(),m=L.find(x=>x.key===k),c=[...document.querySelectorAll('[data-v]')].find(x=>x.dataset.v===k);
   if(c&&m)c.textContent=priceOf(k)?f(priceOf(k)*m.q,2):'—';matTotal(L);save();
 });
 $('#v-materiale').addEventListener('click',e=>{
   if(e.target.id!=='matCopy')return;
-  const L=materials(P,R),rows=[['Categorie','Material','UM','Cantitate','Preț unitar','Valoare']];
+  const L=materialsAll(),rows=[['Categorie','Material','UM','Cantitate','Preț unitar','Valoare']];
   L.forEach(m=>{const p=priceOf(m.key)||0;rows.push([m.cat,m.name,m.um,m.q,p?f(p,2):'',p?f(p*m.q,2):''])});
   copy(rows.map(r=>r.join('\t')).join('\n'),'Tabel copiat. Lipește-l în Excel sau Google Sheets.');
 });
@@ -1758,7 +1835,7 @@ vW.addEventListener('input',e=>{
   if(tf==='s'){renderWork()}save();
 });
 vW.addEventListener('click',e=>{
-  if(e.target.id==='wGen'){const have=new Set(P.tasks.map(t=>t.t));const n=genTasks(P,R).filter(t=>!have.has(t.t));P.tasks.push(...n);save();renderWork();toast(n.length?`Am adăugat ${n.length} etape.`:'Etapele sunt deja în listă.');return}
+  if(e.target.id==='wGen'){const have=new Set(P.tasks.map(t=>t.t));const n=genTasksAll().filter(t=>!have.has(t.t));P.tasks.push(...n);save();renderWork();toast(n.length?`Am adăugat ${n.length} etape.`:'Etapele sunt deja în listă.');return}
   if(e.target.id==='wAdd'){const t={id:uid(),t:'Sarcină nouă',s:'todo',who:'',due:'',hrs:'',note:''};P.tasks.push(t);editTask=t.id;save();renderWork();const i=document.getElementById('t-t-'+t.id);if(i){i.focus();i.select()}return}
   const card=e.target.closest('[data-id]');if(!card)return;const t=P.tasks.find(x=>x.id===card.dataset.id);if(!t)return;
   const mv=e.target.closest('[data-mv]');
@@ -1775,9 +1852,39 @@ function showTab(t){
 function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='lucrari')renderWork()}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});
 
-function changed(full){R=compute(P);renderIso();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
+function changed(full){R=computeLv();renderIso();renderLevels();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
+function switchLevel(id){
+  if(id===P.lvCur||!P.levels.some(l=>l.id===id))return;
+  const cur={};LVK.forEach(k=>cur[k]=P[k]);P.lvData[P.lvCur]=cur;
+  const d=P.lvData[id]||{};LVK.forEach(k=>P[k]=d[k]||(k==='routes'||k==='boxes'?{}:[]));delete P.lvData[id];
+  P.lvCur=id;sel=null;isoId='';R=computeLv();fit();changed(true);renderLevels();
+}
+function renderLevels(){const el=$('#lvSel');if(!el)return;el.innerHTML=lvSorted(P).map(l=>`<option value="${l.id}"${l.id===P.lvCur?' selected':''}>${esc(l.name)}</option>`).join('')+'<option value="__add">+ Nivel nou…</option>';}
+function addLevel(){
+  snap();const ls=lvSorted(P),top=ls[ls.length-1],n=P.levels.length;
+  const l={id:uid(),name:n===1?'Etaj':'Etaj '+n,elev:+((+top.elev||0)+(+P.H||2.6)+.3).toFixed(2)};P.levels.push(l);P.lvData[l.id]={};
+  switchLevel(l.id);toast(`Am adăugat ${l.name}. Conturul nivelului de jos apare punctat; îl poți copia din Proiect și circuite.`);
+}
+$('#lvSel').addEventListener('change',e=>{const v=e.target.value;if(v==='__add')addLevel();else switchLevel(v);renderLevels()});
+insp.addEventListener('click',e=>{
+  const b=e.target.closest('[data-lva]');if(!b)return;const a=b.dataset.lva,id=b.dataset.lid;
+  if(a==='go')switchLevel(id);
+  else if(a==='add')addLevel();
+  else if(a==='copy'){const ls=lvSorted(P),ix=ls.findIndex(l=>l.id===P.lvCur);if(ix<1)return;snap();const src=lvGet(P,ls[ix-1].id),map={};
+    for(const r of src.rooms){const nid=uid();map[r.id]=nid}
+    P.rooms=src.rooms.map(r=>({...r,id:map[r.id],of:r.of?map[r.of]:undefined}));
+    P.struct=src.struct.filter(g=>g.k==='gol'||g.k==='rez').map(g=>({...g,id:uid(),of:g.of?map[g.of]:undefined}));
+    fit();changed(true);toast('Am copiat camerele. Redenumește-le și ajustează-le pentru acest nivel.')}
+  else if(a==='del'){if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Apasă din nou ca să ștergi';return}
+    snap();if(id===P.lvCur){const o=lvSorted(P).find(l=>l.id!==id);switchLevel(o.id)}P.levels=P.levels.filter(l=>l.id!==id);delete P.lvData[id];changed(true);renderLevels()}
+});
+insp.addEventListener('change',e=>{
+  const el=e.target,k=el.dataset.lvf;if(!k)return;const l=P.levels.find(q=>q.id===el.dataset.lid);if(!l)return;snap();
+  if(k==='name'){l.name=el.value.trim()||l.name}else{const v=parseFloat(el.value);if(isFinite(v))l.elev=v}
+  changed(true);renderLevels();
+});
 function renderProjSel(){$('#projSel').innerHTML=store.projects.map(p=>`<option value="${p.id}"${p.id===P.id?' selected':''}>${esc(p.name)}</option>`).join('')}
-function openProject(p){P=p;store.current=p.id;undoS=[];redoS=[];sel=null;editTask=null;renderProjSel();R=compute(P);fit();changed(true)}
+function openProject(p){P=p;store.current=p.id;undoS=[];redoS=[];sel=null;editTask=null;renderProjSel();renderLevels();R=computeLv();fit();changed(true)}
 $('#projSel').onchange=e=>{const p=store.projects.find(x=>x.id===e.target.value);if(p)openProject(p)};
 $('#newProj').onclick=()=>{const p=blank('Proiect '+(store.projects.length+1));store.projects.push(p);openProject(p);showTab('plan');setTool('room')};
 $('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
@@ -1821,8 +1928,8 @@ mq.addEventListener?.('change',retheme);
 new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 new ResizeObserver(()=>{if(tab==='plan')resize()}).observe(stage);
 
-readColors();renderTools();renderLayers();renderProjSel();
-R=compute(P);renderIso();
+readColors();renderTools();renderLayers();renderProjSel();renderLevels();
+R=computeLv();renderIso();
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 connectCloud();
