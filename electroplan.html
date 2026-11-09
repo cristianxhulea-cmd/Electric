@@ -270,6 +270,16 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <h2>Proiectele tale</h2>
       <ul class="recent" id="introRecent"></ul>
     </section>
+    <form class="intro-card" id="authBox" hidden style="grid-column:1/-1;max-width:520px">
+      <h2 id="authT">Intră în cont</h2>
+      <p style="margin:0;color:#AFC0CF;font-size:14px" id="authH">Proiectele tale sunt salvate în cont și le vezi doar tu, pe orice dispozitiv.</p>
+      <label class="f" style="color:#AFC0CF">E-mail<input id="authE" type="email" inputmode="email" autocomplete="username" required style="background:#0C1621;color:#E8EEF3;border-color:rgba(175,192,207,.35)"></label>
+      <label class="f" style="color:#AFC0CF" id="authPL">Parolă<input id="authP" type="password" autocomplete="current-password" minlength="6" style="background:#0C1621;color:#E8EEF3;border-color:rgba(175,192,207,.35)"></label>
+      <label class="f" style="color:#AFC0CF" id="authP2L" hidden>Repetă parola<input id="authP2" type="password" autocomplete="new-password" minlength="6" style="background:#0C1621;color:#E8EEF3;border-color:rgba(175,192,207,.35)"></label>
+      <p id="authMsg" style="margin:0;font-size:14px;color:#E0A26C" role="status"></p>
+      <div class="intro-acts"><button class="ib pri" type="submit" id="authGo">Intră în cont</button><button class="ib" type="button" id="authSw">Creează cont nou</button></div>
+      <button type="button" id="authForgot" style="align-self:flex-start;background:none;border:0;color:#8FB8EE;padding:0;font-size:14px;text-decoration:underline">Ai uitat parola?</button>
+    </form>
     <div class="intro-foot"><span>Calcule orientative conform I7-2011. Proiectul final se verifică și se semnează de un electrician autorizat ANRE.</span><label><input type="checkbox" id="introSkip"> Nu mai afișa la pornire</label></div>
   </div>
 </div>
@@ -402,7 +412,7 @@ const JBT={dozaS:'s',dozaM:'m',dozaL:'l'};
 const SHORT={intrCS:'Cap scară',intrCR:'Cruce',scris:'Scris',trecere:'Trecere nivel',schita:'Schiță',gol:'Gol perete',prizaM:'Priză 1–5',dozaS:'Doză mică',dozaM:'Doză medie',dozaL:'Doză mare',tv:'Priză TV',select:'Selectează',room:'Cameră',usa:'Ușă',geam:'Fereastră',rez:'Perete rez.',grinda:'Grindă',priza:'Priză',priza2:'Priză dublă',prizaip:'Priză IP44',lumina:'Plafonieră',spot:'Spot',aplica:'Aplică',intr:'Întrerupător',intr2:'Întrer. dublu',msr:'Mașină rufe',msv:'Mașină vase',cuptor:'Cuptor',plita:'Plită',ac:'Aer cond.',boiler:'Boiler',ded:'Alt consumator',tablou:'Tablou'};
 const RT={living:'Living',dormitor:'Dormitor',bucatarie:'Bucătărie',baie:'Baie',hol:'Hol',birou:'Birou',debara:'Debara',altul:'Altă cameră'};
 const ST={todo:'De făcut',doing:'În lucru',done:'Finalizat'};
-const KEY='electroplan.v1';
+const KEY0='electroplan.v1';let KEY=KEY0;
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,10);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -700,14 +710,15 @@ async function sbPull(){
 function renderAccount(){const b=$('#accBtn');if(!b)return;b.hidden=!sb;b.textContent=sbUser?'Cont':'Conectează-te';b.title=sbUser?sbUser.email||'':'Salvează proiectele online'}
 async function sbConnect(){
   if(!SB_KEY||!/^https?:$/.test(location.protocol)){setSync('local');return}
-  try{await loadSB()}catch(e){setSync('local');return}
+  try{await loadSB()}catch(e){siteMode=false;setSync('local');if(!$('#intro').hidden)showIntro();toast('Nu mă pot conecta acum la cont. Lucrezi local, pe acest dispozitiv.');return}
   sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});renderAccount();
   sb.auth.onAuthStateChange((ev,session)=>{
+    if(ev==='PASSWORD_RECOVERY'){sbUser=session&&session.user||null;renderAccount();setAuthMode('reset');$('#authBox').hidden=false;$('#introActs').hidden=true;$('#intro').hidden=false;return}
     const u=session&&session.user;if(u&&sbUser&&u.id===sbUser.id){sbUser=u;return}sbUser=u||null;renderAccount();
-    if(sbUser){cloud.col=sbCol;cloud.seen=false;setSync('conn');sbPull();if(ev==='SIGNED_IN')toast('Conectat ca '+(sbUser.email||'')+'. Proiectele se sincronizează.')}
-    else{cloud.col=null;setSync('local')}
+    if(sbUser){useStore(KEY0+':'+sbUser.id,true);cloud.col=sbCol;cloud.seen=false;setSync('conn');sbPull();if(!$('#intro').hidden)showIntro();if(ev==='SIGNED_IN')toast('Bine ai venit, '+(sbUser.email||'')+'.')}
+    else{cloud.col=null;setSync('local');useStore(KEY0+':anon',false);authMode='in';showIntro()}
   });
-  const{data}=await sb.auth.getSession();if(!data.session)setSync('local');
+  const{data}=await sb.auth.getSession();if(!data.session){setSync('local');showIntro()}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sbUser&&Date.now()-sbPullT>15000){sbPullT=Date.now();sbPull()}});
   window.addEventListener('online',()=>{if(sbUser){flush();sbPull()}});
   setInterval(()=>{if(sbUser&&document.visibilityState==='visible'&&!cloud.busy)sbPull()},120000);
@@ -715,7 +726,7 @@ async function sbConnect(){
 $('#accBtn').onclick=()=>{const on=!!sbUser;$('#accH').textContent=on?`Conectat ca ${sbUser.email}. Proiectele se salvează online automat.`:'Te conectezi cu adresa de e-mail: primești un link, îl deschizi pe acest dispozitiv și gata. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.';$('#accEL').hidden=on;$('#accGo').hidden=on;$('#accOut').hidden=!on;$('#accSync').hidden=!on;$('#accDlg').showModal()};
 $('#accC').onclick=()=>$('#accDlg').close();
 $('#accSync').onclick=async()=>{await sbPull();flush();toast('Sincronizat.')};
-$('#accOut').onclick=async()=>{await sb.auth.signOut();$('#accDlg').close();toast('Te-ai deconectat. Proiectele rămân și pe acest dispozitiv.')};
+$('#accOut').onclick=async()=>{$('#accDlg').close();await sb.auth.signOut();toast('Te-ai deconectat.')};
 $('#accF').addEventListener('submit',async e=>{e.preventDefault();const em=$('#accE').value.trim();if(!/^\S+@\S+\.\S+$/.test(em)){toast('Scrie o adresă de e-mail validă.');return}
   const{error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){toast(error.status===429?'Ai cerut prea multe linkuri. Încearcă din nou peste câteva minute.':'Nu am putut trimite linkul: '+error.message);return}
@@ -2342,15 +2353,46 @@ R=computeLv();renderIso();
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 connectCloud();
+let authMode='in';
+function setAuthMode(m){authMode=m;const T={in:['Intră în cont','Intră în cont','Creează cont nou','Proiectele tale sunt salvate în cont și le vezi doar tu, pe orice dispozitiv.'],up:['Cont nou','Creează contul','Am deja cont','Alege o parolă de cel puțin 6 caractere. Vei primi un e-mail de confirmare.'],reset:['Parolă nouă','Salvează parola',null,'Scrie parola nouă pentru contul tău.'],forgot:['Resetează parola','Trimite link de resetare','Înapoi la conectare','Îți trimitem pe e-mail un link prin care alegi o parolă nouă.']}[m];
+  $('#authT').textContent=T[0];$('#authGo').textContent=T[1];$('#authSw').hidden=!T[2];if(T[2])$('#authSw').textContent=T[2];$('#authH').textContent=T[3];$('#authMsg').textContent='';
+  $('#authPL').hidden=m==='forgot';$('#authP2L').hidden=!(m==='up'||m==='reset');$('#authE').closest('label').hidden=m==='reset';$('#authForgot').hidden=m!=='in';
+  $('#authP').autocomplete=m==='in'?'current-password':'new-password';}
+const authErr=e=>{const m=(e&&e.message||'').toLowerCase();if(/invalid login/.test(m))return'E-mail sau parolă greșită.';if(/not confirmed/.test(m))return'Confirmă întâi adresa: deschide linkul din e-mailul primit la înregistrare.';if(/already registered|already been registered/.test(m))return'Există deja un cont cu acest e-mail. Intră în cont sau resetează parola.';if(/at least 6|password should/.test(m))return'Parola trebuie să aibă cel puțin 6 caractere.';if(e&&e.status===429||/rate limit/.test(m))return'Prea multe încercări. Așteaptă câteva minute.';if(/fetch|network/.test(m))return'Nu există conexiune la internet.';return e&&e.message||'A apărut o eroare.'};
+$('#authSw').onclick=()=>setAuthMode(authMode==='in'?'up':'in');
+$('#authForgot').onclick=()=>setAuthMode('forgot');
+$('#authBox').addEventListener('submit',async e=>{
+  e.preventDefault();if(!sb)return;const em=$('#authE').value.trim(),pw=$('#authP').value,pw2=$('#authP2').value,msg=$('#authMsg'),go=$('#authGo');msg.textContent='';
+  if((authMode==='up'||authMode==='reset')&&pw!==pw2){msg.textContent='Parolele nu coincid.';return}
+  go.disabled=true;try{
+    if(authMode==='in'){const{error}=await sb.auth.signInWithPassword({email:em,password:pw});if(error)msg.textContent=authErr(error)}
+    else if(authMode==='up'){const{data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});if(error)msg.textContent=authErr(error);else if(!data.session){setAuthMode('in');$('#authE').value=em;$('#authMsg').textContent='Cont creat. Deschide linkul de confirmare din e-mail, apoi intră în cont.'}}
+    else if(authMode==='forgot'){const{error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});if(error)msg.textContent=authErr(error);else{setAuthMode('in');$('#authMsg').textContent='Ți-am trimis linkul de resetare pe '+em+'.'}}
+    else if(authMode==='reset'){const{error}=await sb.auth.updateUser({password:pw});if(error)msg.textContent=authErr(error);else{toast('Parola a fost schimbată.');setAuthMode('in');showIntro()}}
+  }catch(x){msg.textContent=authErr(x)}finally{go.disabled=false}
+});
+function useStore(key,migrate){
+  try{store.current=P.id;localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}
+  KEY=key;let s2=null;try{s2=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(migrate){let base=null;try{base=JSON.parse(localStorage.getItem(KEY0))}catch(e){}const own=base&&Array.isArray(base.projects)?base.projects.filter(x=>!x.sample):[];
+    if(own.length){s2=s2&&Array.isArray(s2.projects)?s2:{projects:[],current:null};for(const x of own)if(!s2.projects.some(q=>q.id===x.id))s2.projects.push(x);setTimeout(()=>toast(`Am mutat în contul tău ${own.length} ${own.length===1?'proiect găsit':'proiecte găsite'} pe acest dispozitiv.`),600)}try{localStorage.removeItem(KEY0)}catch(e){}}
+  if(!s2||!Array.isArray(s2.projects)||!s2.projects.length){const sm=sample();s2={projects:[sm],current:sm.id}}
+  store=s2;store.projects.forEach(norm);cloud.last={};store.projects.forEach(markSaved);cloud.seen=false;
+  openProject(store.projects.find(x=>x.id===store.current)||store.projects[0]);
+}
+let siteMode=!window.claude&&!!SB_KEY&&/^https?:$/.test(location.protocol);
+const gated=()=>siteMode&&!sbUser;
 function showIntro(){
   const el=$('#intro'),ps=store.projects.slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),last=ps.find(x=>!x.sample)||ps[0];
   const rel=t=>{if(!t)return'nesalvat încă';const d=(Date.now()-t)/1000;if(d<90)return'acum';if(d<3600)return Math.round(d/60)+' min în urmă';if(d<86400)return Math.round(d/3600)+' h în urmă';return new Date(t).toLocaleDateString('ro-RO')};
   $('#introActs').innerHTML=`${last?`<button class="ib pri" type="button" data-io="open" data-id="${last.id}">Continuă: ${esc(last.name.length>28?last.name.slice(0,27)+'…':last.name)}</button>`:''}<button class="ib${last?'':' pri'}" type="button" data-io="new">+ Proiect nou</button>${sb&&!sbUser?'<button class="ib" type="button" data-io="login">Conectează-te</button>':''}`;
   $('#introRecent').innerHTML=ps.slice(0,6).map(x=>{const lv=Array.isArray(x.levels)?x.levels.length:1,rooms=(x.rooms||[]).filter(r=>!r.of).length+Object.values(x.lvData||{}).reduce((t,d)=>t+((d.rooms||[]).filter(r=>!r.of).length),0);return`<li><button type="button" data-io="open" data-id="${x.id}"><b>${esc(x.name)}</b><span>${x.sample?'exemplu':rel(x.updated)}</span><small>${rooms} ${rooms===1?'cameră':'camere'} · ${lv} ${lv===1?'nivel':'niveluri'}${x.client&&!x.sample?' · '+esc(x.client):''}</small></button></li>`}).join('')||'<li style="color:#8FA6BA">Nu ai încă proiecte. Începe cu „Proiect nou”.</li>';
   try{$('#introSkip').checked=localStorage.getItem('electroplan.noIntro')==='1'}catch(e){}
+  const g=gated();$('#authBox').hidden=!g;$('#introActs').hidden=g;$('.intro-card:not(#authBox)').hidden=g;$('#introSkip').closest('label').hidden=g;
+  if(g&&authMode!=='reset')setAuthMode(authMode==='up'||authMode==='forgot'?authMode:'in');
   el.hidden=false;
 }
-function hideIntro(){$('#intro').hidden=true;requestAnimationFrame(resize)}
+function hideIntro(){if(gated())return;$('#intro').hidden=true;requestAnimationFrame(resize)}
 $('#intro').addEventListener('click',e=>{
   const b=e.target.closest('[data-io]');if(!b)return;const k=b.dataset.io;
   if(k==='open'){const p2=store.projects.find(x=>x.id===b.dataset.id);hideIntro();if(p2&&p2!==P)openProject(p2)}
@@ -2360,7 +2402,7 @@ $('#intro').addEventListener('click',e=>{
 $('#introSkip').addEventListener('change',e=>{try{localStorage.setItem('electroplan.noIntro',e.target.checked?'1':'0')}catch(x){}});
 $('#brandBtn').addEventListener('click',showIntro);
 $('#brandBtn').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showIntro()}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#intro').hidden)hideIntro()},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#intro').hidden&&!gated())hideIntro()},true);
 {let skip=false;try{skip=localStorage.getItem('electroplan.noIntro')==='1'}catch(e){}if(!skip&&!(location.hash||'').slice(1))showIntro()}
 const h0=(location.hash||'').slice(1);if(['calcul','materiale','lucrari'].includes(h0))showTab(h0);
 })();

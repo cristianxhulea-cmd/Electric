@@ -53,7 +53,7 @@ La deschidere apare ecranul de pornire: continuă ultimul proiect, proiect nou, 
 
 ## Cont și sincronizare
 
-Pe site-ul publicat, „Conectează-te” din antet trimite un link de conectare pe e-mail. După conectare, proiectele se salvează online (Supabase) și apar pe orice dispozitiv conectat cu același e-mail; modificările făcute fără internet se urcă la revenirea conexiunii. Fiecare utilizator vede doar proiectele lui (Row Level Security, vezi `supabase/migrations`). Pe linkul Claude, proiectele se salvează în contul Claude.
+Pe site-ul publicat, ecranul de start cere autentificare cu e-mail și parolă („Creează cont nou” la prima utilizare, „Ai uitat parola?” pentru resetare). Fiecare utilizator vede doar proiectele lui: online prin Row Level Security (vezi `supabase/migrations`), iar local fiecare cont are propriul spațiu în browser. Proiectele se salvează online (Supabase) și apar pe orice dispozitiv conectat cu același cont; modificările făcute fără internet se urcă la revenirea conexiunii. „Ieși din cont” revine la ecranul de autentificare. Pe linkul Claude, proiectele se salvează în contul Claude.
 
 ## Instalare ca aplicație
 
