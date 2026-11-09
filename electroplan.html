@@ -657,7 +657,7 @@ async function flush(){
     try{if(p)await cloud.col.doc(id).set({p:JSON.parse(JSON.stringify(p)),updated:p.updated||0,name:p.name});else await cloud.col.doc(id).delete();fails=0}
     catch(e){
       const c=e&&e.code;
-      if(c==='invalid_argument'||c==='not_granted'||c==='revoked'){cloud.busy=false;setSync('ro');return}
+      if(c==='invalid_argument'||c==='not_granted'||c==='revoked'){cloud.busy=false;setSync('ro');if(cloud.col===sbCol)checkSession();return}
       if(c==='quota_exceeded'){cloud.busy=false;setSync('full');toast('Spațiul din cont s-a umplut. Șterge proiecte vechi.');return}
       if(++fails>3){cloud.queue.add(id);cloud.busy=false;setSync('err');return}
       cloud.queue.add(id);await new Promise(r=>setTimeout(r,2000*fails+Math.random()*1000));
@@ -693,7 +693,28 @@ async function connectCloud(){
   cloud.col.onSnapshot(onRemote,()=>{cloud.col=null;setSync('err')});
 }
 const SB_URL='https://mqyvtxrdxhaogjranrps.supabase.co',SB_KEY='sb_publishable_L2ILOYrD_mFvPdMzVVTawg_mhXFbyNe';
-let sb=null,sbUser=null,sbPullT=0;
+let sb=null,sbUser=null,sbPullT=0,sbSid=null,claimNext=false,kickMsg='',kicking=false;
+let urlLogin=/access_token=|[?&]code=/.test(location.hash+location.search);
+const jwtSid=s=>{try{return JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).session_id||null}catch(e){return null}};
+const devName=()=>{const u=navigator.userAgent;return/iPad|Tablet/i.test(u)||(/Android/i.test(u)&&!/Mobile/i.test(u))||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'tabletă':/Mobi|iPhone|Android/i.test(u)?'telefon':'calculator'};
+async function claimSession(){if(!sb||!sbUser||!sbSid)return true;const{error}=await sb.from('active_sessions').upsert({user_id:sbUser.id,session_id:sbSid,device:devName(),claimed_at:new Date().toISOString()});if(!error){try{await sb.auth.signOut({scope:'others'})}catch(e){}}return true}
+async function checkSession(){
+  if(!sb||!sbUser||!sbSid)return true;
+  const{data,error}=await sb.from('active_sessions').select('session_id,device').eq('user_id',sbUser.id).maybeSingle();
+  if(error){if(error.status===401||/jwt|session/i.test(error.message||'')){kick('');return false}return true}if(!data)return claimSession();
+  if(data.session_id!==sbSid){kick(data.device);return false}return true;
+}
+async function kick(dev){
+  if(kicking)return;kicking=true;kickMsg=`Contul tău a fost deschis pe alt dispozitiv${dev?' ('+dev+')':''}, așa că te-am deconectat aici. Intră din nou ca să lucrezi pe acest dispozitiv.`;
+  cloud.col=null;cloud.queue.clear();try{await sb.auth.signOut({scope:'local'})}catch(e){}kicking=false;
+}
+async function startUser(ev){
+  useStore(KEY0+':'+sbUser.id,true);setSync('conn');
+  const fresh=claimNext||urlLogin;claimNext=false;urlLogin=false;
+  if(!(fresh?await claimSession():await checkSession()))return;
+  cloud.col=sbCol;cloud.seen=false;sbPull();if(!$('#intro').hidden)showIntro();
+  if(ev==='SIGNED_IN')toast('Bine ai venit, '+(sbUser.email||'')+'.');
+}
 function loadSB(){return window.supabase?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('sb'));document.head.appendChild(sc)})}
 const sbErr=e=>({code:!e?'unavailable':e.code==='42501'||e.status===401||e.status===403?'invalid_argument':'unavailable',message:e&&e.message||''});
 const sbCol={doc:id=>({
@@ -701,7 +722,7 @@ const sbCol={doc:id=>({
   delete:async()=>{const{error}=await sb.from('projects').update({deleted:true,updated:Date.now()}).eq('id',id);if(error)throw sbErr(error)}
 })};
 async function sbPull(){
-  if(!sb||!sbUser)return;const{data,error}=await sb.from('projects').select('id,data,updated,deleted');
+  if(!sb||!sbUser||!cloud.col)return;if(!(await checkSession()))return;const{data,error}=await sb.from('projects').select('id,data,updated,deleted');
   if(error){setSync('err');return}
   const del=new Map(data.filter(r=>r.deleted).map(r=>[r.id,r.updated]));
   if(del.size){store.projects=store.projects.filter(p=>!del.has(p.id)||(p.updated||0)>del.get(p.id));if(!store.projects.length)store.projects.push(norm(blank('Proiect 1')))}
@@ -713,15 +734,17 @@ async function sbConnect(){
   try{await loadSB()}catch(e){siteMode=false;setSync('local');if(!$('#intro').hidden)showIntro();toast('Nu mă pot conecta acum la cont. Lucrezi local, pe acest dispozitiv.');return}
   sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});renderAccount();
   sb.auth.onAuthStateChange((ev,session)=>{
+    if(session)sbSid=jwtSid(session)||sbSid;
     if(ev==='PASSWORD_RECOVERY'){sbUser=session&&session.user||null;renderAccount();setAuthMode('reset');$('#authBox').hidden=false;$('#introActs').hidden=true;$('#intro').hidden=false;return}
     const u=session&&session.user;if(u&&sbUser&&u.id===sbUser.id){sbUser=u;return}sbUser=u||null;renderAccount();
-    if(sbUser){useStore(KEY0+':'+sbUser.id,true);cloud.col=sbCol;cloud.seen=false;setSync('conn');sbPull();if(!$('#intro').hidden)showIntro();if(ev==='SIGNED_IN')toast('Bine ai venit, '+(sbUser.email||'')+'.')}
-    else{cloud.col=null;setSync('local');useStore(KEY0+':anon',false);authMode='in';showIntro()}
+    if(sbUser)setTimeout(()=>startUser(ev),0);
+    else{sbSid=null;cloud.col=null;cloud.queue.clear();setSync('local');useStore(KEY0+':anon',false);authMode='in';showIntro();if(kickMsg){$('#authMsg').textContent=kickMsg;toast(kickMsg);kickMsg=''}}
   });
   const{data}=await sb.auth.getSession();if(!data.session){setSync('local');showIntro()}
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sbUser&&Date.now()-sbPullT>15000){sbPullT=Date.now();sbPull()}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!sbUser)return;if(Date.now()-sbPullT>15000){sbPullT=Date.now();sbPull()}else checkSession()});
   window.addEventListener('online',()=>{if(sbUser){flush();sbPull()}});
   setInterval(()=>{if(sbUser&&document.visibilityState==='visible'&&!cloud.busy)sbPull()},120000);
+  setInterval(()=>{if(sbUser&&cloud.col&&document.visibilityState==='visible')checkSession()},20000);
 }
 $('#accBtn').onclick=()=>{const on=!!sbUser;$('#accH').textContent=on?`Conectat ca ${sbUser.email}. Proiectele se salvează online automat.`:'Te conectezi cu adresa de e-mail: primești un link, îl deschizi pe acest dispozitiv și gata. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.';$('#accEL').hidden=on;$('#accGo').hidden=on;$('#accOut').hidden=!on;$('#accSync').hidden=!on;$('#accDlg').showModal()};
 $('#accC').onclick=()=>$('#accDlg').close();
@@ -2365,10 +2388,10 @@ $('#authBox').addEventListener('submit',async e=>{
   e.preventDefault();if(!sb)return;const em=$('#authE').value.trim(),pw=$('#authP').value,pw2=$('#authP2').value,msg=$('#authMsg'),go=$('#authGo');msg.textContent='';
   if((authMode==='up'||authMode==='reset')&&pw!==pw2){msg.textContent='Parolele nu coincid.';return}
   go.disabled=true;try{
-    if(authMode==='in'){const{error}=await sb.auth.signInWithPassword({email:em,password:pw});if(error)msg.textContent=authErr(error)}
-    else if(authMode==='up'){const{data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});if(error)msg.textContent=authErr(error);else if(!data.session){setAuthMode('in');$('#authE').value=em;$('#authMsg').textContent='Cont creat. Deschide linkul de confirmare din e-mail, apoi intră în cont.'}}
+    if(authMode==='in'){claimNext=true;const{error}=await sb.auth.signInWithPassword({email:em,password:pw});if(error){claimNext=false;msg.textContent=authErr(error)}}
+    else if(authMode==='up'){claimNext=true;const{data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});if(error||!data.session)claimNext=false;if(error)msg.textContent=authErr(error);else if(!data.session){setAuthMode('in');$('#authE').value=em;$('#authMsg').textContent='Cont creat. Deschide linkul de confirmare din e-mail, apoi intră în cont.'}}
     else if(authMode==='forgot'){const{error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});if(error)msg.textContent=authErr(error);else{setAuthMode('in');$('#authMsg').textContent='Ți-am trimis linkul de resetare pe '+em+'.'}}
-    else if(authMode==='reset'){const{error}=await sb.auth.updateUser({password:pw});if(error)msg.textContent=authErr(error);else{toast('Parola a fost schimbată.');setAuthMode('in');showIntro()}}
+    else if(authMode==='reset'){const{error}=await sb.auth.updateUser({password:pw});if(error)msg.textContent=authErr(error);else{toast('Parola a fost schimbată.');setAuthMode('in');claimNext=true;urlLogin=false;await startUser('SIGNED_IN');hideIntro()}}
   }catch(x){msg.textContent=authErr(x)}finally{go.disabled=false}
 });
 function useStore(key,migrate){

@@ -53,7 +53,7 @@ La deschidere apare ecranul de pornire: continuă ultimul proiect, proiect nou, 
 
 ## Cont și sincronizare
 
-Pe site-ul publicat, ecranul de start cere autentificare cu e-mail și parolă („Creează cont nou” la prima utilizare, „Ai uitat parola?” pentru resetare). Fiecare utilizator vede doar proiectele lui: online prin Row Level Security (vezi `supabase/migrations`), iar local fiecare cont are propriul spațiu în browser. Proiectele se salvează online (Supabase) și apar pe orice dispozitiv conectat cu același cont; modificările făcute fără internet se urcă la revenirea conexiunii. „Ieși din cont” revine la ecranul de autentificare. Pe linkul Claude, proiectele se salvează în contul Claude.
+Pe site-ul publicat, ecranul de start cere autentificare cu e-mail și parolă („Creează cont nou” la prima utilizare, „Ai uitat parola?” pentru resetare). Fiecare utilizator vede doar proiectele lui: online prin Row Level Security (vezi `supabase/migrations`), iar local fiecare cont are propriul spațiu în browser. Proiectele se salvează online (Supabase) și apar pe orice dispozitiv conectat cu același cont; modificările făcute fără internet se urcă la revenirea conexiunii. „Ieși din cont” revine la ecranul de autentificare. Un cont e activ pe un singur dispozitiv: la logarea pe alt dispozitiv, cel vechi este deconectat în cel mult 20 de secunde, iar baza de date refuză citirea și scrierea din sesiunea veche (`supabase/migrations/0002_single_session.sql`). Modificările nesalvate rămân pe dispozitivul vechi și se urcă la următoarea logare de pe el. Pe linkul Claude, proiectele se salvează în contul Claude.
 
 ## Instalare ca aplicație
 
