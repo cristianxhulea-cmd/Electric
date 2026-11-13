@@ -74,3 +74,7 @@ La fiecare publicare, `build.sh` scrie versiunea în `version.json` și în `ind
 Prețurile unitare completate în Materiale intră în catalogul tău și se folosesc automat în toate proiectele. Catalogul și datele firmei se sincronizează în cont, la fel ca proiectele. Din Materiale poți exporta catalogul ca fișier CSV, îl editezi în Excel și îl imporți înapoi; rândurile se recunosc după cod sau după denumirea materialului.
 
 Fila Ofertă adună materialele și manopera din plan cu prețurile din catalog și generează un PDF A4 cu datele firmei și logo-ul, beneficiarul, lista de materiale și manoperă, discount, TVA (21 % implicit, sau neplătitor), condițiile (valabilitate, avans, termen, garanție, cont bancar) și locurile de semnătură. Materialele pot fi incluse în ofertă sau trecute ca procurate de beneficiar. Numărul ofertei crește automat.
+
+## Mod măsurare
+
+Selectezi o cameră și apeși „Măsoară”. Aplicația evidențiază pe rând peretele de sus, cel din dreapta, apoi pe cei opuși, pentru verificare, înălțimea camerei și ușile și ferestrele camerei. Scrii valoarea în centimetri (362,5) sau în metri (3,625), apeși Enter sau Tab, iar planul se ajustează și trece la pasul următor; un telemetru cu „keyboard mode” poate scrie direct în câmp. Dacă peretele opus diferă cu peste 2 cm, poți alege media, păstra valoarea sau remăsura. La uși și ferestre măsori distanța de la colțul marcat și lățimea golului. Cotele măsurate apar cu verde. „+ Cameră alăturată” adaugă camera vecină și pornește direct măsurarea ei.
