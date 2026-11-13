@@ -79,7 +79,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr)}
+#app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
 .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:23px;letter-spacing:.02em;line-height:1}
 .wires{display:inline-flex;flex-direction:column;gap:2px}
@@ -237,8 +237,18 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
 .guide{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;line-height:1.45}
 .guide li::marker{font-weight:700;color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--canvas);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20}
-.insp-x{position:sticky;top:0;align-self:flex-end;margin:-8px -8px -40px 0;z-index:1;width:36px;height:36px;justify-content:center}
-.stage.io .selbar{right:360px}
+.insp-bar{position:sticky;top:-16px;z-index:2;display:flex;align-items:center;gap:6px;margin:-16px -16px -4px;padding:8px 10px 8px 14px;background:var(--panel);border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;cursor:grab;touch-action:none}
+.insp-bar .btn{width:36px;height:36px;justify-content:center;flex:none}
+.insp-t{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.insp-grip{position:absolute;left:-6px;top:0;bottom:0;width:12px;cursor:ew-resize}
+.inspector.pt .insp-grip{left:50%;top:4px;bottom:auto;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:var(--line);cursor:ns-resize}
+.inspector.pt .insp-bar{padding-top:14px;cursor:ns-resize}
+.inspector:not(.pt) .insp-bar::before{content:"";position:absolute;left:3px;top:50%;width:4px;height:28px;margin-top:-14px;border-radius:2px;background:var(--line)}
+.inspector.min{bottom:auto!important;overflow:hidden;width:min(240px,calc(100% - 88px))}
+.inspector.min.pt{width:auto}
+.inspector.min>*:not(.insp-bar){display:none!important}
+.inspector.min .insp-bar{margin-bottom:-16px;border-bottom:0}
+.stage.io .selbar{right:calc(var(--inspW,340px) + 20px)}
 .btn .lbl{white-space:nowrap}
 body.focus .top{display:none}
 body.focus #app{grid-template-rows:minmax(0,1fr)}
@@ -263,6 +273,8 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   .scale,#focusBtn .lbl{display:none}
 }
 @media (max-width:640px){
+  .tabs{order:3;flex:1 1 100%;min-width:0}
+  .tabs button{padding:6px 9px;font-size:13.5px}
   .plan{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
   .tools{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--line);padding:6px 8px;gap:6px}
   .tg{flex-direction:row}
@@ -1936,10 +1948,23 @@ function renderInspector(){
       <label class="ck full"><input type="checkbox" data-s="proj" data-f="shareBoxes" id="p-share"${P.shareBoxes!==false?' checked':''}> Doze comune pentru lumini și prize (mai puține doze)</label>
     </div></div>`;
   }
-  insp.innerHTML=`<button class="btn ic insp-x" type="button" data-x aria-label="Închide panoul">✕</button>`+h;insp.hidden=!inspOpen;stage.classList.toggle('io',inspOpen);renderDyn();renderSelbar();
+  insp.innerHTML=`<div class="insp-bar"><span class="insp-grip" data-grip title="Trage ca să schimbi mărimea panoului" aria-hidden="true"></span><span class="insp-t"></span><button class="btn ic" type="button" data-min aria-label="${inspMin?'Arată panoul':'Minimizează panoul'}" title="${inspMin?'Arată panoul':'Minimizează panoul'}">${inspMin?'▴':'▾'}</button><button class="btn ic" type="button" data-x aria-label="Închide panoul">✕</button></div>`+h;{const t=insp.querySelector('h2');insp.querySelector('.insp-t').textContent=t?t.textContent:''}applyInsp();insp.hidden=!inspOpen;stage.classList.toggle('io',inspOpen);renderDyn();renderSelbar();
 }
 let inspOpen=false;
 function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector()}
+let inspMin=false,inspSz=(()=>{try{return JSON.parse(localStorage.getItem('electroplan.insp')||'{}')}catch(e){return{}}})();
+const inspPortrait=()=>matchMedia('(max-width:760px),(orientation:portrait) and (max-width:1100px)').matches;
+function applyInsp(){const pt=inspPortrait();insp.classList.toggle('min',inspMin);insp.classList.toggle('pt',pt);
+  if(pt){insp.style.width='';insp.style.height=inspMin?'':(inspSz.h?Math.min(inspSz.h,Hh-90)+'px':'');insp.style.maxHeight=inspMin||inspSz.h?'none':''}
+  else{insp.style.height='';insp.style.maxHeight='';insp.style.width=inspMin?'':(inspSz.w?Math.min(inspSz.w,W-120)+'px':'')}
+  stage.style.setProperty('--inspW',(inspMin?220:(insp.offsetWidth||340))+'px')}
+insp.addEventListener('click',e=>{if(e.target.closest('[data-min]')){inspMin=!inspMin;renderInspector()}});
+insp.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-grip],.insp-bar');if(!g||e.target.closest('button'))return;const pt=inspPortrait(),r=insp.getBoundingClientRect(),x0=e.clientX,y0=e.clientY;let moved=false;
+  const mv=ev=>{const dx=ev.clientX-x0,dy=ev.clientY-y0;if(!moved&&Math.hypot(dx,dy)<6)return;moved=true;if(inspMin){inspMin=false;renderInspector()}
+    if(pt){inspSz.h=Math.round(clamp(r.bottom-ev.clientY+ (y0-r.top),140,Hh-90));insp.style.height=inspSz.h+'px';insp.style.maxHeight='none'}
+    else{inspSz.w=Math.round(clamp(r.right-ev.clientX+(x0-r.left),260,Math.min(640,W-120)));insp.style.width=inspSz.w+'px'}stage.style.setProperty('--inspW',insp.offsetWidth+'px')};
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);if(moved){try{localStorage.setItem('electroplan.insp',JSON.stringify(inspSz))}catch(x){}}else if(e.target.closest('[data-grip]')){inspMin=!inspMin;renderInspector()}};
+  addEventListener('pointermove',mv);addEventListener('pointerup',up)});
 function renderSelbar(){
   const el=$('#selbar');if(!el)return;
   if(tool==='scris'){el.innerHTML=`<span class="tag">${svgSym('scris')}<span>${txBusy?'Citesc scrisul…':txStrokes.length?'Când ai terminat de scris, apasă Redenumește.':'Scrie cu penul numele în chenarul camerei, de exemplu „Dormitor 1”.'}</span></span>${txStrokes.length&&!txBusy?'<button class="btn pri" type="button" data-sb="tx-ok">Redenumește</button><button class="btn" type="button" data-sb="tx-clear">Șterge scrisul</button>':''}<button class="btn" type="button" data-sb="done">Gata</button>`;return}
@@ -2722,7 +2747,7 @@ $('#v-admin').addEventListener('click',async e=>{
   toast({suspend:'Cont suspendat.',activate:'Cont activat.',d30:'Prelungit cu 30 de zile.',d365:'Prelungit cu un an.',kick:'Dispozitiv deconectat.',del:'Cont șters.'}[k]);loadAdmin();
 });
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
-function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?370:0),AH=Hh-(bot?Hh*.55:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
+function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?(insp.offsetWidth||340)+30:0),AH=Hh-(bot?(insp.offsetHeight||Hh*.55)+20:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
 function enterRoom(id){if(!P.rooms.some(z=>z.id===id))return;focusId=id;sel=null;isoId='';renderIso();setInsp(true);fitRects(groupOf(id),60);renderSelbar();draw()}
 function exitRoom(){focusId=null;sel=null;setInsp(false);fit();renderInspector();draw()}
 function wallOf(it){
