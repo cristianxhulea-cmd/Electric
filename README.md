@@ -74,3 +74,9 @@ La fiecare publicare, `build.sh` scrie versiunea în `version.json` și în `ind
 Prețurile unitare completate în Materiale intră în catalogul tău și se folosesc automat în toate proiectele. Catalogul și datele firmei se sincronizează în cont, la fel ca proiectele. Din Materiale poți exporta catalogul ca fișier CSV, îl editezi în Excel și îl imporți înapoi; rândurile se recunosc după cod sau după denumirea materialului.
 
 Fila Ofertă adună materialele și manopera din plan cu prețurile din catalog și generează un PDF A4 cu datele firmei și logo-ul, beneficiarul, lista de materiale și manoperă, discount, TVA (21 % implicit, sau neplătitor), condițiile (valabilitate, avans, termen, garanție, cont bancar) și locurile de semnătură. Materialele pot fi incluse în ofertă sau trecute ca procurate de beneficiar. Numărul ofertei crește automat.
+
+## Prețuri Dedeman (doar pentru catalogul administratorului)
+
+În Materiale, la fiecare material poți lega pagina produsului de pe dedeman.ro. O dată pe săptămână, când deschizi Materiale, aplicația citește prețurile prin funcția Supabase `dedeman-price` și îți arată ce s-a schimbat; aplici doar ce bifezi. Prețurile se salvează fără TVA. Termenii Dedeman permit preluarea conținutului doar în interes personal, de aceea funcția răspunde numai conturilor din `ADMIN_EMAILS` și nu publică prețurile altor utilizatori.
+
+Instalare: Supabase → Edge Functions → Deploy a new function → Via Editor, numele `dedeman-price`, conținutul din `supabase/functions/dedeman-price/index.ts`. Apoi Edge Functions → Secrets → `ADMIN_EMAILS` = adresa ta de e-mail.

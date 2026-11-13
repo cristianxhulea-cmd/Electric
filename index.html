@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ElectroPlan">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="app-version" content="f411a58743b7">
+<meta name="app-version" content="7c78b52939fa">
 </head>
 <body>
 <title>ElectroPlan</title>
@@ -361,6 +361,22 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
 </div>
 
 <div class="upd" id="updBar" role="status" hidden><span>Versiune nouă disponibilă.</span><button class="btn pri" type="button" id="updGo">Actualizează</button><button class="x" type="button" id="updX" aria-label="Mai târziu">×</button></div>
+<dialog id="lnkDlg">
+  <form class="dl" id="lnkF">
+    <div><h2>Link produs Dedeman</h2><p class="muted" style="margin:0" id="lnkH"></p></div>
+    <label class="f">Adresa produsului<input id="lnkU" type="url" inputmode="url" placeholder="https://www.dedeman.ro/ro/.../p/1041400" autocomplete="off"></label>
+    <p class="muted" style="margin:0;font-size:13px">Deschide produsul pe dedeman.ro, copiază adresa din bara browserului și lipește-o aici. Prețul se citește doar pentru catalogul tău, la cel mult o săptămână.</p>
+    <div class="bar" style="justify-content:flex-end"><button class="btn" type="button" id="lnkC">Renunță</button><button class="btn pri" type="submit">Salvează</button></div>
+  </form>
+</dialog>
+<dialog id="ddDlg">
+  <div class="dl">
+    <div><h2>Prețuri noi de la Dedeman</h2><p class="muted" style="margin:0" id="ddH"></p></div>
+    <div class="tbl" style="max-height:50vh;overflow:auto"><table><thead><tr><th></th><th>Material</th><th class="n">Acum</th><th class="n">Dedeman</th><th class="n">Dif.</th></tr></thead><tbody id="ddRows"></tbody></table></div>
+    <p class="muted" style="margin:0;font-size:13px" id="ddErr"></p>
+    <div class="bar" style="justify-content:flex-end"><button class="btn" type="button" id="ddC">Nu acum</button><button class="btn pri" type="button" id="ddGo">Aplică prețurile bifate</button></div>
+  </div>
+</dialog>
 <dialog id="accDlg">
   <form class="dl" id="accF">
     <div><h2>Cont ElectroPlan</h2><p class="muted" style="margin:0" id="accH">Te conectezi cu adresa de e-mail. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.</p></div>
@@ -670,11 +686,11 @@ let R=null,tool='select',sel=null,undoS=[],redoS=[],tab='plan',editTask=null,hov
 const layers={routes:true,boxes:true,tags:true,dims:true,cmd:false};
 const view={s:60,ox:40,oy:40,rot:0};
 const cloud={db:null,col:null,seen:false,busy:false,queue:new Set(),last:{}};
-const CFG0=()=>({updated:0,firm:{tva:true,cota:21},prices:{},names:{},labor:{},offer:{valid:30,avans:50,garantie:'24 de luni pentru manoperă',termen:'',mat:'incl'},next:1});
+const CFG0=()=>({updated:0,firm:{tva:true,cota:21},prices:{},names:{},labor:{},links:{},at:{},dd:{last:0},offer:{valid:30,avans:50,garantie:'24 de luni pentru manoperă',termen:'',mat:'incl'},next:1});
 let cfg=CFG0();
 const cfgId=()=>'cfg-'+(typeof sbUser!=='undefined'&&sbUser?sbUser.id:'local');
 const isCfg=id=>String(id).startsWith('cfg-');
-function cfgNorm(o){const d=CFG0(),c=Object.assign(d,o||{});for(const k of['firm','prices','names','labor','offer'])c[k]=Object.assign({},d[k],(o||{})[k]||{});return c}
+function cfgNorm(o){const d=CFG0(),c=Object.assign(d,o||{});for(const k of['firm','prices','names','labor','offer','links','at','dd'])c[k]=Object.assign({},d[k],(o||{})[k]||{});return c}
 function loadCfg(){try{cfg=cfgNorm(JSON.parse(localStorage.getItem(KEY+':cfg')||'null'))}catch(e){cfg=CFG0()}}
 function saveCfg(){cfg.updated=Date.now();try{localStorage.setItem(KEY+':cfg',JSON.stringify(cfg))}catch(e){}if(cloud.col){cloud.queue.add(cfgId());flush()}}
 loadCfg();
@@ -2127,11 +2143,12 @@ function renderMat(){
   for(const m of L){
     if(m.cat!==cat){cat=m.cat;body+=`<tr class="cat"><td colspan="5">${esc(cat)}</td></tr>`}
     const pr=P.prices[m.key]??cfg.prices[m.key],dp=derivedPrice(P,m.key),ep=priceOf(m.key);
-    body+=`<tr><td>${esc(m.name)}</td><td>${m.um}</td><td class="n">${m.q}</td><td class="n"><input class="pin" type="number" inputmode="decimal" min="0" step=".01" data-pk="${esc(m.key)}" id="pr-${esc(m.key.replace(/[^a-z0-9]/gi,'_'))}" value="${pr??''}" placeholder="${dp?f(dp,2):'0,00'}" aria-label="Preț unitar ${esc(m.name)}"></td><td class="n" data-v="${esc(m.key)}">${ep?f(ep*m.q,2):'—'}</td></tr>`;
+    body+=`<tr><td>${esc(m.name)}${m.cat!=='Manoperă'?srcLine(m.key):''}</td><td>${m.um}</td><td class="n">${m.q}</td><td class="n"><input class="pin" type="number" inputmode="decimal" min="0" step=".01" data-pk="${esc(m.key)}" id="pr-${esc(m.key.replace(/[^a-z0-9]/gi,'_'))}" value="${pr??''}" placeholder="${dp?f(dp,2):'0,00'}" aria-label="Preț unitar ${esc(m.name)}"></td><td class="n" data-v="${esc(m.key)}">${ep?f(ep*m.q,2):'—'}</td></tr>`;
   }
   el.innerHTML=`<div class="wrap">
     <h1>Necesar de materiale</h1>
     <p class="lede">Cantități calculate din lungimile traseelor, cu ${P.reserve} % rezervă la cablu. Prețurile unitare se salvează în catalogul tău și se folosesc automat în toate proiectele.</p>
+    ${ddBar()}
     <div class="bar"><button class="btn pri" type="button" id="matCopy">Copiază tabelul pentru Excel</button><button class="btn" type="button" id="catExp">Exportă catalogul (CSV)</button><label class="btn" for="catImp">Importă catalogul (CSV)</label><input type="file" id="catImp" accept=".csv,text/csv,.txt" hidden><button class="btn" type="button" id="toOffer">Ofertă pentru client →</button></div>
     <div class="tbl"><table><thead><tr><th>Material</th><th>UM</th><th class="n">Cantitate</th><th class="n">Preț unitar (lei)</th><th class="n">Valoare (lei)</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="4">Total (fără TVA)</td><td class="n" id="matTot"></td></tr></tfoot></table></div>
     <div class="card">
@@ -2146,6 +2163,7 @@ function renderMat(){
     </div>
   </div>`;
   matTotal(L);
+  ddAuto();
 }
 function matTotal(L){L=L||materialsAll();const t=L.reduce((s,m)=>s+(priceOf(m.key)||0)*m.q,0);const e=$('#matTot');if(e)e.textContent=t?f(t,2):'—'}
 $('#v-materiale').addEventListener('change',e=>{
@@ -2160,11 +2178,14 @@ $('#v-materiale').addEventListener('change',e=>{
 $('#v-materiale').addEventListener('input',e=>{
   const k=e.target.dataset.pk;if(!k)return;const v=parseFloat(e.target.value);
   const L=materialsAll(),m=L.find(x=>x.key===k),c=[...document.querySelectorAll('[data-v]')].find(x=>x.dataset.v===k);
-  const had=P.prices[k]!=null;delete P.prices[k];if(isFinite(v)&&v>0){cfg.prices[k]=v;if(m)cfg.names[k]=m.name}else delete cfg.prices[k];
+  const had=P.prices[k]!=null;delete P.prices[k];if(isFinite(v)&&v>0){cfg.prices[k]=v;cfg.at[k]=Date.now();if(m)cfg.names[k]=m.name}else delete cfg.prices[k];
   if(c&&m)c.textContent=priceOf(k)?f(priceOf(k)*m.q,2):'—';matTotal(L);clearTimeout(saveCfg.t);saveCfg.t=setTimeout(saveCfg,600);if(had)save();
 });
 $('#v-materiale').addEventListener('click',e=>{
   if(e.target.id==='toOffer'){showTab('oferta');return}
+  if(e.target.id==='ddNow'){ddCheck(false);return}
+  const lk=e.target.closest('[data-lnk]');if(lk){openLink(lk.dataset.lnk);return}
+  const ul=e.target.closest('[data-unl]');if(ul){delete cfg.links[ul.dataset.unl];saveCfg();renderMat();return}
   if(e.target.id==='catExp'){exportCatalog();return}
   if(e.target.id!=='matCopy')return;
   const L=materialsAll(),rows=[['Categorie','Material','UM','Cantitate','Preț unitar','Valoare']];
@@ -2520,6 +2541,46 @@ async function exportOffer(){
   renderOffer();
   await saveBlob(doc.output('blob'),`Oferta_${String(o.nr).replace(/[^\w-]+/g,'_')}_${fileBase()}.pdf`,['Oferta a fost salvată.','Oferta a fost descărcată.']);
 }
+const DD_RE=/^https:\/\/www\.dedeman\.ro\/ro\/[a-z0-9-]+\/p\/\d+\/?$/,DD_WEEK=7*864e5;
+let ddBusy=false,ddDenied=false,ddRes=[],ddFail=0;
+const ddOn=()=>!!(sb&&sbUser&&!window.claude);
+function srcLine(k){const l=cfg.links[k],at=cfg.at[k];
+  if(l)return`<div style="font-size:12px;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center"><a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:var(--accent)">Dedeman ↗</a><span class="muted">${l.gross?money(l.gross)+' lei cu TVA · ':''}${l.last?'verificat '+dRo(isoD(new Date(l.last))):'neverificat încă'}${l.err?' · <span style="color:var(--bad)">'+esc(l.err)+'</span>':''}</span><button class="btn" type="button" data-lnk="${esc(k)}" style="padding:1px 6px;font-size:12px">Schimbă</button><button class="btn" type="button" data-unl="${esc(k)}" style="padding:1px 6px;font-size:12px" aria-label="Șterge linkul">×</button></div>`;
+  return`<div style="font-size:12px;margin-top:3px"><button class="btn" type="button" data-lnk="${esc(k)}" style="padding:1px 6px;font-size:12px">+ link Dedeman</button>${at&&Date.now()-at>30*864e5?` <span class="muted">preț actualizat acum ${Math.round((Date.now()-at)/864e5)} zile</span>`:''}</div>`}
+function ddBar(){const n=Object.keys(cfg.links).length;if(!n)return'';
+  const last=cfg.dd.last,ago=last?Math.floor((Date.now()-last)/864e5):null;
+  return`<div class="card" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 16px"><b>Prețuri Dedeman</b><span class="muted">${n} ${n===1?'produs legat':'produse legate'} · ${last?(ago<1?'verificate azi':`verificate acum ${ago} ${ago===1?'zi':'zile'}`):'neverificate încă'}</span>${ddDenied?'<span class="muted" style="font-size:13px">Verificarea automată e disponibilă doar pentru contul de administrator. Linkurile rămân utile ca să verifici prețul manual.</span>':ddOn()?`<button class="btn" type="button" id="ddNow" ${ddBusy?'disabled':''}>${ddBusy?'Se verifică…':'Verifică acum'}</button>`:'<span class="muted" style="font-size:13px">Verificarea merge în aplicația de pe site, cu contul de administrator.</span>'}</div>`}
+function openLink(k){const m=materialsAll().find(x=>x.key===k),l=cfg.links[k];$('#lnkH').textContent=m?m.name:(cfg.names[k]||k);$('#lnkU').value=l?l.url:'';$('#lnkDlg').dataset.k=k;$('#lnkDlg').showModal();setTimeout(()=>$('#lnkU').focus(),50)}
+$('#lnkC').onclick=()=>$('#lnkDlg').close();
+$('#lnkF').addEventListener('submit',e=>{e.preventDefault();const k=$('#lnkDlg').dataset.k;let u=$('#lnkU').value.trim().replace(/[?#].*$/,'').replace(/\/$/,'');
+  if(!u){delete cfg.links[k];saveCfg();$('#lnkDlg').close();renderMat();return}
+  if(!DD_RE.test(u)){toast('Linkul trebuie să fie pagina unui produs de pe dedeman.ro, de forma …/p/1234567.');return}
+  const m=materialsAll().find(x=>x.key===k);if(m)cfg.names[k]=m.name;cfg.links[k]={url:u};saveCfg();$('#lnkDlg').close();renderMat();
+  if(ddOn())ddCheck(false,[k]);});
+function ddAuto(){if(ddOn()&&!ddBusy&&!ddDenied&&Date.now()-ddFail>36e5&&Object.keys(cfg.links).length&&Date.now()-(cfg.dd.last||0)>DD_WEEK)ddCheck(true)}
+async function ddCheck(auto,only){
+  if(ddBusy||!ddOn())return;const keys=(only||Object.keys(cfg.links)).filter(k=>cfg.links[k]);if(!keys.length)return;
+  ddBusy=true;if(tab==='materiale'&&!only)renderMat();if(!auto)toast('Verific prețurile la Dedeman…');
+  let data=null,err=null;try{({data,error:err}=await sb.functions.invoke('dedeman-price',{body:{urls:keys.map(k=>cfg.links[k].url)}}))}catch(e){err=e}
+  ddBusy=false;
+  if(err||!data||!Array.isArray(data.results)){ddFail=Date.now();const st=err&&err.context&&err.context.status;
+    if(st===403){ddDenied=true;if(!auto)toast('Verificarea prețurilor Dedeman e disponibilă doar pentru contul de administrator.')}
+    else if(st===404){ddDenied=true;if(!auto)toast('Funcția „dedeman-price” nu e instalată încă în Supabase.')}
+    else if(!auto)toast('Nu am putut verifica prețurile acum. Încearcă mai târziu.');
+    if(tab==='materiale')renderMat();return}
+  const byUrl=new Map(data.results.map(r=>[r.url,r]));const now=Date.now();ddRes=[];const bad=[];
+  for(const k of keys){const l=cfg.links[k],r=byUrl.get(l.url);if(!r)continue;l.last=now;
+    if(r.error){l.err=r.error;bad.push(cfg.names[k]||k);continue}delete l.err;l.title=r.title;l.gross=r.gross;
+    const cur=cfg.prices[k]!=null?+cfg.prices[k]:null;if(cur==null||Math.abs(cur-r.net)>=.01)ddRes.push({k,cur,net:r.net,gross:r.gross,title:r.title});else cfg.at[k]=now}
+  if(!only)cfg.dd.last=now;saveCfg();if(tab==='materiale')renderMat();
+  if(ddRes.length){$('#ddH').textContent=`Am verificat ${keys.length} ${keys.length===1?'produs':'produse'}. ${ddRes.length} ${ddRes.length===1?'preț diferă':'prețuri diferă'} de catalogul tău. Prețurile sunt fără TVA, ca în restul aplicației.`;
+    $('#ddRows').innerHTML=ddRes.map((d,i)=>{const df=d.cur==null?null:(d.net-d.cur)/d.cur*100;return`<tr><td><input type="checkbox" data-dd="${i}" checked aria-label="Aplică"></td><td>${esc(cfg.names[d.k]||d.k)}<div class="muted" style="font-size:12px">${esc(d.title||'')}</div></td><td class="n">${d.cur==null?'—':money(d.cur)}</td><td class="n"><b>${money(d.net)}</b></td><td class="n" style="color:${df==null?'inherit':df>0?'var(--bad)':'var(--ok)'}">${df==null?'nou':(df>0?'+':'')+f(df,1)+' %'}</td></tr>`}).join('');
+    $('#ddErr').textContent=bad.length?`Nu am putut citi: ${bad.join(', ')}. Verifică linkurile marcate cu roșu.`:'';$('#ddDlg').showModal()}
+  else if(!auto||bad.length)toast(bad.length?`Prețurile sunt la zi, dar ${bad.length} ${bad.length===1?'link nu a mers':'linkuri nu au mers'}.`:`Prețurile Dedeman sunt la zi (${keys.length} verificate).`);
+}
+$('#ddC').onclick=()=>$('#ddDlg').close();
+$('#ddGo').onclick=()=>{const now=Date.now();let n=0;document.querySelectorAll('#ddRows [data-dd]').forEach(c=>{if(!c.checked)return;const d=ddRes[+c.dataset.dd];cfg.prices[d.k]=d.net;cfg.at[d.k]=now;delete P.prices[d.k];n++});
+  saveCfg();save();$('#ddDlg').close();if(tab==='materiale')renderMat();else if(tab==='oferta')renderOffer();toast(`Am actualizat ${n} ${n===1?'preț':'prețuri'}.`)};
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
 function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?370:0),AH=Hh-(bot?Hh*.55:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
 function enterRoom(id){if(!P.rooms.some(z=>z.id===id))return;focusId=id;sel=null;isoId='';renderIso();setInsp(true);fitRects(groupOf(id),60);renderSelbar();draw()}
