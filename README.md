@@ -77,6 +77,6 @@ Fila Ofertă adună materialele și manopera din plan cu prețurile din catalog 
 
 ## Prețuri Dedeman (doar pentru catalogul administratorului)
 
-În Materiale, la fiecare material poți lega pagina produsului de pe dedeman.ro. O dată pe săptămână, când deschizi Materiale, aplicația citește prețurile prin funcția Supabase `dedeman-price` și îți arată ce s-a schimbat; aplici doar ce bifezi. Prețurile se salvează fără TVA. Termenii Dedeman permit preluarea conținutului doar în interes personal, de aceea funcția răspunde numai conturilor din `ADMIN_EMAILS` și nu publică prețurile altor utilizatori.
+În Materiale, la fiecare material poți lega pagina produsului de pe dedeman.ro. O dată pe săptămână, când deschizi Materiale, aplicația citește prețurile prin funcția Supabase `dedeman-price` și îți arată ce s-a schimbat; aplici doar ce bifezi. Prețurile se salvează fără TVA. Pentru produsele vândute la pachet (de exemplu un set de 10 cleme) completezi „Bucăți în pachet”, iar prețul se împarte automat; dacă titlul produsului conține „N buc” și pachetul e lăsat 1, aplicația te avertizează. Termenii Dedeman permit preluarea conținutului doar în interes personal, de aceea funcția răspunde numai conturilor din `ADMIN_EMAILS` și nu publică prețurile altor utilizatori.
 
 Instalare: Supabase → Edge Functions → Deploy a new function → Via Editor, numele `dedeman-price`, conținutul din `supabase/functions/dedeman-price/index.ts`. Apoi Edge Functions → Secrets → `ADMIN_EMAILS` = adresa ta de e-mail.
