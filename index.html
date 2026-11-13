@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ElectroPlan">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="app-version" content="57f144ffb1e5">
+<meta name="app-version" content="1e51c9ddd5d3">
 </head>
 <body>
 <title>ElectroPlan</title>
@@ -1158,7 +1158,8 @@ function draw(){
   {const si=sel&&sel.kind==='item'?P.items.find(i=>i.id===sel.id):null,sws=layers.cmd?P.items.filter(isSw):si?(isSw(si)?[si]:isLight(si)?ctrlBy(P,si):[]):[];
     if(pickSw){const ps=P.items.find(i=>i.id===pickSw);if(ps&&!sws.includes(ps))sws.push(ps)}
     if(sws.length){ctx.save();ctx.strokeStyle=C.accent;ctx.lineWidth=1.6;ctx.setLineDash([2,4]);ctx.lineCap='round';for(const sw of sws)for(const l of ctrlOf(P,sw)){ctx.beginPath();ctx.moveTo(sx(sw.x),sy(sw.y));const mx=(sw.x+l.x)/2,my=(sw.y+l.y)/2,nx=-(l.y-sw.y)*.12,ny=(l.x-sw.x)*.12;ctx.quadraticCurveTo(sx(mx+nx),sy(my+ny),sx(l.x),sy(l.y));ctx.stroke()}ctx.restore()}}
-  if(sel){
+  if(meas)chips=[];
+  if(sel&&!meas){
     ctx.strokeStyle=C.sel;ctx.lineWidth=2.5;
     if(sel.kind==='item'){const it=P.items.find(i=>i.id===sel.id);if(it){ctx.beginPath();ctx.arc(sx(it.x),sy(it.y),r0+6,0,Math.PI*2);ctx.stroke()}}
     else if(sel.kind==='room'){const r=P.rooms.find(i=>i.id===sel.id);if(r){ctx.setLineDash([8,5]);ctx.strokeRect(sx(r.x)-4,sy(r.y)-4,r.w*view.s+8,r.h*view.s+8);ctx.setLineDash([]);
@@ -2544,8 +2545,9 @@ function startMeas(id){const r0=P.rooms.find(z=>z.id===id);if(!r0)return;const r
   if(tool!=='select')setTool('select');if(focusId)focusId=null;
   meas={rid,steps:measSteps(rid),i:0,warn:null};sel=null;setInsp(false);
   $('#stage').classList.add('meas');renderMeas();setTimeout(()=>{measFit();draw()},80)}
-function measFit(){if(!meas)return;const grp=P.rooms.filter(z=>z.id===meas.rid||z.of===meas.rid);if(!grp.length)return;
-  const bar=$('#measBar'),bh=bar?bar.offsetHeight+20:200,x0=Math.min(...grp.map(r=>r.x)),y0=Math.min(...grp.map(r=>r.y)),x1=Math.max(...grp.map(r=>r.x+r.w)),y1=Math.max(...grp.map(r=>r.y+r.h));
+function measFit(){if(!meas)return;const grp=P.rooms.filter(z=>z.id===meas.rid||z.of===meas.rid);if(!grp.length)return;const st=measCur();
+  const bar=$('#measBar'),bh=bar?bar.offsetHeight+20:200;let x0=Math.min(...grp.map(r=>r.x)),y0=Math.min(...grp.map(r=>r.y)),x1=Math.max(...grp.map(r=>r.x+r.w)),y1=Math.max(...grp.map(r=>r.y+r.h));
+  if(st&&st.k==='op'){const o=st.o,g=st.g;if(o.o==='h'){x0=g.x;x1=g.x+g.w;y0=o.c-.9;y1=o.c+.9}else{y0=g.y;y1=g.y+g.h;x0=o.c-.9;x1=o.c+.9}}
   if(view.rot){fitRects(grp,60);return}const AH=Math.max(120,Hh-bh);view.auto=false;view.s=clamp(Math.min((W-140)/Math.max(.5,x1-x0),(AH-110)/Math.max(.5,y1-y0)),12,320);view.ox=W/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s+8}
 function endMeas(show){if(!meas)return;const rid=meas.rid;meas=null;sel={kind:'room',id:rid};$('#stage').classList.remove('meas');$('#measBar').hidden=true;
   if(show!==false){const grp=P.rooms.filter(z=>z.id===rid||z.of===rid),r=grp[0];if(r)toast(`${r.name}: ${grp.length>1?'măsurată':Math.round(r.w*100)+' × '+Math.round(r.h*100)+' cm'}, înălțime ${Math.round(P.H*100)} cm.`)}
@@ -2558,15 +2560,15 @@ function renderMeas(){
   if(s.k==='w'||s.k==='h'){q=`Peretele ${SIDE[s.k]}${wallTag(s.g,s.k)}${multi?' · porțiunea '+(grp.indexOf(s.g)+1):''}`;help='Măsoară de la colț la colț, la aproximativ 1 m de pardoseală, peretele evidențiat cu portocaliu.';cur=s.k==='w'?s.g.w:s.g.h}
   else if(s.k==='w2'||s.k==='h2'){q=`Verificare: peretele ${SIDE[s.k]}${wallTag(s.g,s.k)}`;help='Peretele opus. Dacă iese diferit cu mai mult de 2 cm, îți spun. Poți și sări peste el.';cur=s.k==='w2'?s.g.w:s.g.h}
   else if(s.k==='H'){q='Înălțimea camerei';help='De la pardoseala finită la tavan. Se folosește la coborârile cablurilor pe pereți, pentru tot proiectul.';cur=P.H}
-  else{const o=s.o,hz=o.o==='h';q=`${s.kind==='door'?'Ușa':'Fereastra'} de pe peretele ${hz?(Math.abs(o.c-s.g.y)<.02?'de sus':'de jos'):(Math.abs(o.c-s.g.x)<.02?'din stânga':'din dreapta')}`;help=`Prima valoare: de la colțul marcat cu punct (${hz?'stânga':'sus'}) până la marginea golului. A doua: lățimea golului, între tocuri.`;two=true}
+  else{const o=s.o,hz=o.o==='h';q=`${s.kind==='door'?'Ușa':'Fereastra'} de pe peretele ${hz?(Math.abs(o.c-s.g.y)<.02?'de sus':'de jos'):(Math.abs(o.c-s.g.x)<.02?'din stânga':'din dreapta')}`;help=`Distanța: de la colțul marcat pe plan (${hz?'capătul din stânga':'capătul de sus'} al peretelui) până la marginea golului cea mai apropiată. Lățimea: golul ${s.kind==='door'?'ușii':'ferestrei'}, de la un toc la celălalt.`;two=true}
   const dots=meas.steps.map((x,k)=>`<i style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:${k<meas.i?'var(--ok)':k===meas.i?'var(--sel)':'var(--line)'}"></i>`).join('');
   const w=meas.warn;
   el.innerHTML=`<form id="measF" autocomplete="off">
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px"><b style="font-family:var(--f-display);font-size:20px">Măsurare · ${esc(r?r.name:'')}</b><span class="muted" style="font-size:13px">pasul ${meas.i+1} din ${n}</span><span style="line-height:8px">${dots}</span><button class="btn" type="button" data-ms="close" style="margin-left:auto" aria-label="Închide măsurarea">✕</button></div>
     <div style="font-weight:600;font-size:16px">${esc(q)}</div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
-      <input id="measV" class="measIn" type="text" inputmode="decimal" enterkeyhint="${two?'next':'done'}" placeholder="${two?'distanța':s.k==='H'?cmTxt(cur*100):cmTxt(cur*100)}" aria-label="${two?'Distanța de la colț':'Lungimea măsurată'}"><span class="muted">cm</span>
-      ${two?`<input id="measV2" class="measIn" type="text" inputmode="decimal" enterkeyhint="done" placeholder="lățimea" aria-label="Lățimea golului"><span class="muted">cm</span>`:''}
+      ${two?'<label style="display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--accent);font-weight:600">Distanța de la colț':''}<input id="measV" class="measIn" type="text" inputmode="decimal" enterkeyhint="${two?'next':'done'}" placeholder="${two?'ex. 45':cmTxt(cur*100)}" aria-label="${two?'Distanța de la colț până la gol':'Lungimea măsurată'}">${two?'</label>':''}<span class="muted">cm</span>
+      ${two?`<label style="display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--sel);font-weight:600">Lățimea golului<input id="measV2" class="measIn" type="text" inputmode="decimal" enterkeyhint="done" placeholder="ex. ${Math.round(s.o.w*100)}" aria-label="Lățimea golului"></label><span class="muted">cm</span>`:''}
       <button class="btn pri" type="submit" style="min-height:44px;padding-inline:18px">OK</button>
       <button class="btn" type="button" data-ms="back" ${meas.i?'':'disabled'}>← Înapoi</button><button class="btn" type="button" data-ms="skip">Sari</button>
     </div>
@@ -2611,8 +2613,15 @@ function drawMeas(){
   if(s.g&&s.k!=='op'){const[a,b]=measWalls(s.g)[s.k];line(a,b,10,.35);line(a,b,4,1);
     const mx=(sx(a.x)+sx(b.x))/2,my=(sy(a.y)+sy(b.y))/2,hz=Math.abs(a.y-b.y)<1e-6,out=s.k==='w'||s.k==='h2'?-1:1,X=mx+(hz?0:out*30),Y=my+(hz?out*24:0);
     const lb='? cm';ctx.globalAlpha=1;ctx.font='700 14px "IBM Plex Mono",monospace';const tw=ctx.measureText(lb).width+18;ctx.fillStyle=C2;ctx.beginPath();ctx.roundRect?ctx.roundRect(X-tw/2,Y-13,tw,26,13):ctx.rect(X-tw/2,Y-13,tw,26);ctx.fill();txt(lb,X,Y+1,14,700,C.canvas)}
-  if(s.k==='op'){const o=s.o,[t0,t1]=dEnds(o),A=dPt(o,t0,0),B=dPt(o,t1,0);line(A,B,10,.35);line(A,B,4,1);const hz=o.o==='h',cx=hz?s.g.x:o.c,cy=hz?o.c:s.g.y;
-    ctx.globalAlpha=1;ctx.fillStyle=C2;ctx.beginPath();ctx.arc(sx(cx),sy(cy),8,0,Math.PI*2);ctx.fill();ctx.setLineDash([5,4]);line({x:cx,y:cy},A,2,1);ctx.setLineDash([])}
+  if(s.k==='op'){const o=s.o,[t0,t1]=dEnds(o),A=dPt(o,t0,0),B=dPt(o,t1,0),hz=o.o==='h',cx=hz?s.g.x:o.c,cy=hz?o.c:s.g.y,inner=hz?(Math.abs(o.c-s.g.y)<.02?1:-1):(Math.abs(o.c-s.g.x)<.02?1:-1);let off=26;
+    const sh=(p,k)=>hz?{X:sx(p.x),Y:sy(p.y)+inner*k}:{X:sx(p.x)+inner*k,Y:sy(p.y)};
+    const dim=(p,q,lab,col)=>{const a=sh(p,off),b=sh(q,off);ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(b.X,b.Y);ctx.stroke();
+      for(const e of[a,b]){ctx.beginPath();hz?(ctx.moveTo(e.X,e.Y-7),ctx.lineTo(e.X,e.Y+7)):(ctx.moveTo(e.X-7,e.Y),ctx.lineTo(e.X+7,e.Y));ctx.stroke()}
+      const mx=(a.X+b.X)/2,my=(a.Y+b.Y)/2;ctx.save();ctx.translate(mx,my);if(!hz)ctx.rotate(-Math.PI/2);halo(lab,0,0,'700 13px "IBM Plex Sans",system-ui,sans-serif',col,'center',C.canvas);ctx.restore()};
+    line(A,B,10,.35);line(A,B,4,1);
+    dim({x:cx,y:cy},A,'distanța',C.accent);off=56;dim(A,B,'lățimea',C2);off=26;
+    ctx.globalAlpha=1;ctx.fillStyle=C.accent;ctx.strokeStyle=C.canvas;ctx.lineWidth=3;ctx.beginPath();ctx.arc(sx(cx),sy(cy),9,0,Math.PI*2);ctx.fill();ctx.stroke();
+    const cp=sh({x:cx,y:cy},-24);halo('colț',cp.X,cp.Y,'700 13px "IBM Plex Sans",system-ui,sans-serif',C.accent,'center',C.canvas)}
   if(s.k==='H'){const grp=P.rooms.filter(z=>z.id===meas.rid||z.of===meas.rid);ctx.globalAlpha=.9;ctx.strokeStyle=C2;ctx.lineWidth=3;ctx.setLineDash([8,6]);for(const g of grp)ctx.strokeRect(sx(g.x),sy(g.y),g.w*view.s,g.h*view.s);ctx.setLineDash([])}
   ctx.restore()}
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
