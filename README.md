@@ -84,3 +84,7 @@ Selectezi o cameră și apeși „Măsoară”. Aplicația evidențiază pe rân
 Fiecare cont are o stare: probă (14 zile la înregistrare), activ sau suspendat, plus o dată de valabilitate (`supabase/migrations/0003_accounts_admin.sql`). Baza de date refuză proiectele conturilor suspendate sau expirate; aplicația verifică starea la pornire și la fiecare minut, deconectează contul și afișează motivul. La suspendare, datele locale ale contului sunt șterse de pe dispozitiv la următoarea verificare.
 
 Fila Admin apare doar pentru rolul `admin` și permite: suspendare, activare, prelungire cu 30 de zile sau un an, deconectarea dispozitivului activ și ștergerea contului cu toate proiectele. Acțiunile se trec în jurnal. Rolul de admin se setează doar din baza de date: `update public.profiles set role='admin', status='active', valid_until='2100-01-01' where lower(email)=lower('adresa@ta');`
+
+## Ergonomie
+
+Bara de unelte arată „Selectează”, ultimele 4 unelte folosite și grupurile (Plan, Structură, Doze, Prize, Iluminat, Consumatori, Alimentare); se deschide câte un grup, iar alegerea rămâne memorată. Bara de jos păstrează zoom, centrare, nivel și trasee; restul (rotire, scară, straturi, ecran mare) e în „Afișare”. Pe ecranul de start, fiecare proiect are meniul ⋯ cu Redenumește, Duplică și Șterge, iar ștergerea se poate anula câteva secunde. Fila Documente adună proiectul tehnic PDF și oferta. Butonul „?” deschide ghidul în 4 pași, afișat automat la proiectele noi până îl oprești.

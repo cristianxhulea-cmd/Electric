@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ElectroPlan">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="app-version" content="4895d9742f11">
+<meta name="app-version" content="b59bb9fdfb05">
 </head>
 <body>
 <title>ElectroPlan</title>
@@ -72,7 +72,14 @@ repeating-linear-gradient(90deg,rgba(150,180,210,.12) 0 1px,transparent 1px 160p
 .ib.pri:hover{background:#EAB384}
 .intro-card{background:rgba(12,22,33,.72);backdrop-filter:blur(6px);border:1px solid rgba(175,192,207,.2);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
 .intro-card h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:24px;color:#E8EEF3}
-.recent{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.recent{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none;max-height:min(56vh,520px);overflow-y:auto}
+.pli{position:relative}
+.recent .pli>button[data-io=open]{padding-right:48px}
+.recent .pmenu{position:absolute;top:6px;right:6px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:8px;font-size:20px;line-height:1;color:#AFC0CF;background:transparent;border:0}
+.recent .pmenu:hover{background:rgba(255,255,255,.08)}
+.pmenu-list{display:flex;flex-wrap:wrap;gap:6px;padding:6px 2px 2px}
+.recent .pmenu-list button{width:auto;display:inline-flex;padding:8px 12px;border-radius:8px;font-size:14px;grid-template-columns:none}
+.recent .pmenu-list .dng{color:#F2A0A0;border-color:rgba(242,160,160,.4)}
 .recent button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(175,192,207,.18);background:rgba(255,255,255,.03);color:#E8EEF3}
 .recent button:hover{border-color:#5B95E0;background:rgba(91,149,224,.1)}
 .recent b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -120,6 +127,12 @@ main{min-height:0;position:relative}
 .tools{display:flex;flex-direction:column;gap:6px;padding:6px 4px;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line)}
 .tg{display:flex;flex-direction:column;gap:2px}
 .tg+.tg{border-top:1px solid var(--line);padding-top:6px}
+.tg-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:46px;padding:4px 2px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-size:9.5px;font-weight:600;text-align:center}
+.tg-h svg{width:20px;height:20px;flex:none}.tg-h span{line-height:1.1;overflow-wrap:anywhere}.tg-h i{display:none}
+.tg-h[aria-expanded=true]{background:var(--accent-soft);border-color:var(--accent)}
+.tg-h.act{border-color:var(--accent);color:var(--accent)}
+.tg-rec{border:0;background:none;min-height:0;padding:2px 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:9px}
+.tg.open{background:var(--bg);border-radius:8px;padding-bottom:4px}
 .tg-l{display:none;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-left:4px}
 .tool{display:flex;flex-direction:column;align-items:center;gap:1px;min-height:48px;padding:5px 2px;border:1px solid transparent;border-radius:7px;background:none;font-size:9.5px;line-height:1.15;text-align:center;color:var(--ink)}
 .tool:hover{background:var(--bg)}
@@ -129,6 +142,8 @@ main{min-height:0;position:relative}
 #cv{display:block;touch-action:none;cursor:crosshair}
 .hud{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none}
 .hud>*{pointer-events:auto}
+.hudMore{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;max-width:min(560px,calc(100vw - 40px));padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.hudMore .layers{margin-left:0}
 .layers{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
 .stage.meas .hud,.stage.meas .selbar{display:none}
 .measBar{position:absolute;left:10px;right:10px;bottom:10px;z-index:7;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px 14px}
@@ -235,6 +250,8 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
 .upd{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:8px 8px 8px 16px;border-radius:12px;background:var(--ink);color:var(--canvas);box-shadow:0 8px 28px rgba(0,0,0,.25);font-size:14px}
 .upd .btn{border-color:transparent}
 .upd .x{background:none;border:0;color:inherit;opacity:.7;font-size:18px;padding:4px 8px}
+.guide{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;line-height:1.45}
+.guide li::marker{font-weight:700;color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--canvas);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20}
 .insp-x{position:sticky;top:0;align-self:flex-end;margin:-8px -8px -40px 0;z-index:1;width:36px;height:36px;justify-content:center}
 .stage.io .selbar{right:360px}
@@ -267,6 +284,9 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   .tg{flex-direction:row}
   .tg+.tg{border-top:0;padding-top:0;border-left:1px solid var(--line);padding-left:6px}
   .tg-l{display:none}
+  .tg-h{width:auto;min-width:64px;flex-direction:column;justify-content:center;text-align:center}
+  .tg-h i{display:none}
+  .tg.open{padding:0 4px 0 0}
   .tool{min-width:56px}
   .kb{grid-template-columns:minmax(0,1fr)}
   .acts{margin-left:0}
@@ -323,7 +343,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <button role="tab" data-tab="plan" aria-selected="true" type="button">Plan</button>
       <button role="tab" data-tab="calcul" aria-selected="false" type="button">Circuite</button>
       <button role="tab" data-tab="materiale" aria-selected="false" type="button">Materiale</button>
-      <button role="tab" data-tab="oferta" aria-selected="false" type="button">Ofertă</button>
+      <button role="tab" data-tab="oferta" aria-selected="false" type="button">Documente</button>
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
       <button role="tab" data-tab="admin" aria-selected="false" type="button" id="tabAdmin" hidden>Admin</button>
     </nav>
@@ -331,6 +351,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <button class="btn" id="accBtn" type="button" hidden>Conectează-te</button>
       <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
       <button class="btn pri" id="installBtn" type="button" hidden>Instalează aplicația</button>
+      <button class="btn ic" id="helpBtn" type="button" title="Cum lucrezi cu ElectroPlan" aria-label="Ajutor" style="font-weight:700;min-width:34px;justify-content:center">?</button>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="btn ic" id="redoBtn" type="button" title="Refă (Ctrl+Y)" aria-label="Refă"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
       <button class="btn" id="ioBtn" type="button" title="Salvare / import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="lbl">Salvare / import</span></button>
@@ -348,13 +369,16 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
           <button class="btn" id="zFit" type="button" title="Centrează pe elementul selectat sau pe tot planul (dublă atingere pe plan)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span class="lbl" id="zFitL">Centrează</span></button>
+          <select id="lvSel" class="chipsel on" aria-label="Nivel"></select>
+          <select id="isoSel" class="chipsel" aria-label="Arată traseul"></select>
+          <button class="btn" id="hudMoreBtn" type="button" aria-expanded="false" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Afișare</span></button>
+          <div class="hudMore" id="hudMore" hidden>
           <button class="btn ic" id="rot90" type="button" title="Rotește planul cu 90°" aria-label="Rotește planul cu 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
           <button class="btn" id="rotReset" type="button" hidden>Îndreaptă</button>
           <span class="scale" id="scaleLbl"></span>
-          <select id="lvSel" class="chipsel on" aria-label="Nivel"></select>
-          <select id="isoSel" class="chipsel" aria-label="Arată traseul"></select>
           <div class="layers" id="layers"></div>
           <button class="btn" id="focusBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">Ecran mare</span></button>
+          </div>
         </div>
       </div>
       <aside class="inspector" id="insp" aria-live="polite" hidden></aside>
@@ -368,6 +392,19 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
 </div>
 
 <div class="upd" id="updBar" role="status" hidden><span>Versiune nouă disponibilă.</span><button class="btn pri" type="button" id="updGo">Actualizează</button><button class="x" type="button" id="updX" aria-label="Mai târziu">×</button></div>
+<dialog id="guideDlg">
+  <div class="dl">
+    <div><h2>Cum lucrezi cu ElectroPlan</h2><p class="muted" style="margin:0">Patru pași, de la casa goală la oferta pentru client.</p></div>
+    <ol class="guide">
+      <li><b>Desenează planul.</b> Alege <i>Schiță</i> și trage cu degetul sau penul conturul casei și pereții dintre camere, apoi apasă <i>Generează planul</i>. Sau folosește <i>Cameră</i> și trage dreptunghiuri.</li>
+      <li><b>Măsoară camerele.</b> Atinge o cameră și apasă <i>Măsoară</i>: scrii lungimile cu telemetrul sau ruleta, iar planul se ajustează. Pune ușile și ferestrele.</li>
+      <li><b>Pune aparatele.</b> Din grupurile din stânga alegi prize, lumini, întrerupătoare, consumatori și tabloul, apoi atingi peretele. Circuitele și traseele se calculează singure, după I7.</li>
+      <li><b>Scoate documentele.</b> La <i>Circuite</i> verifici tabloul, la <i>Materiale</i> completezi prețurile o singură dată, iar la <i>Documente</i> descarci proiectul tehnic și oferta pentru client.</li>
+    </ol>
+    <label class="ck"><input type="checkbox" id="guideOff"> Nu mai afișa la proiectele noi</label>
+    <div class="bar" style="justify-content:flex-end"><button class="btn pri" type="button" id="guideOk">Am înțeles</button></div>
+  </div>
+</dialog>
 <dialog id="accDlg">
   <form class="dl" id="accF">
     <div><h2>Cont ElectroPlan</h2><p class="muted" style="margin:0" id="accH">Te conectezi cu adresa de e-mail. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.</p></div>
@@ -1800,11 +1837,16 @@ function svgSym(type){
   }
   return `<svg viewBox="0 0 32 32" aria-hidden="true">${s}</svg>`;
 }
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let openGrp=lsGet('electroplan.tg')||'Plan',recentT=(()=>{try{return JSON.parse(lsGet('electroplan.recent')||'[]').filter(t=>SHORT[t])}catch(e){return[]}})();
 function renderTools(){
-  $('#tools').innerHTML=TOOLS.map(([l,ts])=>`<div class="tg"><span class="tg-l">${l}</span>${ts.map(t=>`<button class="tool" type="button" data-tool="${t}" aria-pressed="${t===tool}" title="${esc(T[t]?T[t].n:SHORT[t])}">${svgSym(t)}<span>${SHORT[t]}</span></button>`).join('')}</div>`).join('');
+  const btn=t=>`<button class="tool" type="button" data-tool="${t}" aria-pressed="${t===tool}" title="${esc(T[t]?T[t].n:SHORT[t])}">${svgSym(t)}<span>${SHORT[t]}</span></button>`;
+  const rec=recentT.filter(t=>t!=='select').slice(0,4);
+  $('#tools').innerHTML=`<div class="tg">${btn('select')}</div>`+(rec.length?`<div class="tg"><span class="tg-h tg-rec">Recente</span>${rec.map(btn).join('')}</div>`:'')+
+    TOOLS.map(([l,ts])=>{const items=ts.filter(t=>t!=='select'),open=l===openGrp,act=items.includes(tool);return`<div class="tg${open?' open':''}"><button class="tg-h${act?' act':''}" type="button" data-grp="${esc(l)}" aria-expanded="${open}">${svgSym(items[0])}<span>${l}</span><i aria-hidden="true">${open?'▴':'▾'}</i></button>${open?items.map(btn).join(''):''}</div>`}).join('');
 }
-$('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(!b)return;setTool(b.dataset.tool)});
-function setTool(t){if(meas&&t!=='select')endMeas(false);tool=t;if(t!=='scris')txStrokes=[];if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
+$('#tools').addEventListener('click',e=>{const g=e.target.closest('[data-grp]');if(g){openGrp=openGrp===g.dataset.grp?'':g.dataset.grp;lsSet('electroplan.tg',openGrp);renderTools();return}const b=e.target.closest('[data-tool]');if(!b)return;setTool(b.dataset.tool)});
+function setTool(t){if(meas&&t!=='select')endMeas(false);tool=t;if(t!=='select'&&SHORT[t]&&recentT[0]!==t){recentT=[t,...recentT.filter(x=>x!==t)].slice(0,6);lsSet('electroplan.recent',JSON.stringify(recentT));const g=TOOLS.find(([,ts])=>ts.includes(t));if(g)openGrp=g[0];renderTools()}if(t!=='scris')txStrokes=[];if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
 function renderLayers(){
   const L=[['routes','Trasee'],['boxes','Doze'],['cmd','Comenzi'],['tags','Circuite'],['dims','Cote']];
   $('#layers').innerHTML=L.map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
@@ -2059,6 +2101,8 @@ insp.addEventListener('click',e=>{
 
 $('#v-calcul').addEventListener('click',e=>{if(e.target.closest('#pdfBtn')){exportPdf();return}const b=e.target.closest('[data-iso]');if(!b)return;if(b.dataset.lv&&b.dataset.lv!==P.lvCur)switchLevel(b.dataset.lv);setIso(b.dataset.iso)});
 $('#isoSel').addEventListener('change',e=>setIso(e.target.value));
+$('#hudMoreBtn').onclick=e=>{e.stopPropagation();const m=$('#hudMore');m.hidden=!m.hidden;$('#hudMoreBtn').setAttribute('aria-expanded',!m.hidden)};
+document.addEventListener('pointerdown',e=>{const m=$('#hudMore');if(!m.hidden&&!e.target.closest('#hudMore,#hudMoreBtn')){m.hidden=true;$('#hudMoreBtn').setAttribute('aria-expanded','false')}});
 function renderCalc(){
   const el=$('#v-calcul'),multi=P.levels.length>1,lvN=id=>(P.levels.find(l=>l.id===id)||{}).name||'';
   if(!RA)R=computeLv();
@@ -2398,16 +2442,18 @@ function offerStats(c){const o=c.o,fi=c.fi;return`<div class="stat"><span>Materi
       <div class="stat"><span>${fi.tva?'Total cu TVA '+f(+fi.cota||0,0)+' %':'Total de plată'}</span><b>${money(c.tot)}</b><small>${fi.tva?'lei':'neplătitor de TVA'}</small></div>`}
 function renderOffer(){
   if(renderOffer.busy)return;{const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#v-oferta')){renderOffer.busy=true;ae.blur();renderOffer.busy=false}}migratePrices();const el=$('#v-oferta'),c=offerCalc(),o=c.o,fi=c.fi;
-  if(!c.L.length){el.innerHTML=`<div class="wrap"><h1>Ofertă</h1><div class="empty">Oferta apare după ce pui camere, elemente și tabloul pe plan.</div></div>`;return}
+  if(!c.L.length){el.innerHTML=`<div class="wrap"><h1>Documente</h1><div class="empty">Documentele apar după ce pui camere, elemente și tabloul pe plan.</div></div>`;return}
   const F=(k,lb,v,t='text',ex='')=>`<label class="f">${lb}<input data-fi="${k}" type="${t}" value="${esc(v??'')}" ${ex}></label>`;
   const O=(k,lb,v,t='text',ex='')=>`<label class="f">${lb}<input data-of="${k}" type="${t}" value="${esc(v??'')}" ${ex}></label>`;
   const Cl=(k,lb,v,t='text')=>`<label class="f">${lb}<input data-pc="${k}" type="${t}" value="${esc(v??'')}"></label>`;
   el.innerHTML=`<div class="wrap">
-    <h1>Ofertă pentru client</h1>
-    <p class="lede">Oferta folosește cantitățile din plan și prețurile din catalogul tău. Datele firmei și condițiile se păstrează pentru toate ofertele.</p>
+    <h1>Documente</h1>
+    <div class="card" style="flex-direction:row;flex-wrap:wrap;gap:10px;align-items:center"><button class="btn pri" type="button" id="docPdf" style="min-height:44px">Proiect tehnic (PDF)</button><span class="muted" style="font-size:13px;flex:1;min-width:200px">Planurile, schema monofilară și tabelul circuitelor, format A3.</span></div>
+    <h2>Ofertă pentru client</h2>
+    <p class="lede" style="margin:0">Oferta folosește cantitățile din plan și prețurile din catalogul tău. Datele firmei și condițiile se păstrează pentru toate ofertele.</p>
     <div class="stats" id="offStats">${offerStats(c)}</div>
     ${c.miss?`<div class="warns"><li style="list-style:none">${c.miss} ${c.miss===1?'poziție nu are':'poziții nu au'} preț. Completează-le în <button class="btn" type="button" data-go="materiale" style="padding:2px 8px">Materiale</button>, altfel apar cu 0 în ofertă.</li></div>`:''}
-    <div class="bar"><button class="btn pri" type="button" id="offPdf">Descarcă oferta PDF</button>${!fi.name?'<span class="muted" style="font-size:13px">Completează întâi numele firmei, mai jos.</span>':''}</div>
+    <div class="bar"><button class="btn pri" type="button" id="offPdf" style="min-height:44px">Ofertă pentru client (PDF)</button>${!fi.name?'<span class="muted" style="font-size:13px">Completează întâi numele firmei, mai jos.</span>':''}</div>
     <div class="card">
       <h2>Client și lucrare</h2>
       <div class="cfields">${Cl('client','Beneficiar',P.client)}${Cl('adresa','Adresa lucrării',P.adresa)}${Cl('telefon','Telefon',P.telefon,'tel')}</div>
@@ -2460,6 +2506,7 @@ vO.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]');if(g){showTab(g.dataset.go);return}
   if(e.target.id==='logoDel'){delete cfg.firm.logo;saveCfg();renderOffer();return}
   if(e.target.id==='offPdf')exportOffer();
+  if(e.target.id==='docPdf')exportPdf();
 });
 async function exportOffer(){
   const c=offerCalc(),o=c.o,fi=c.fi;
@@ -2753,7 +2800,10 @@ insp.addEventListener('change',e=>{
 function renderProjSel(){$('#projSel').innerHTML=store.projects.map(p=>`<option value="${p.id}"${p.id===P.id?' selected':''}>${esc(p.name)}</option>`).join('')}
 function openProject(p){if(meas)endMeas(false);P=p;store.current=p.id;undoS=[];redoS=[];sel=null;focusId=null;editTask=null;renderProjSel();renderLevels();R=computeLv();fit();changed(true)}
 $('#projSel').onchange=e=>{const p=store.projects.find(x=>x.id===e.target.value);if(p)openProject(p)};
-$('#newProj').onclick=()=>{const p=norm(blank('Proiect '+(store.projects.length+1)));store.projects.push(p);openProject(p);showTab('plan');setTool('room')};
+$('#newProj').onclick=()=>{const p=norm(blank('Proiect '+(store.projects.length+1)));store.projects.push(p);openProject(p);showTab('plan');setTool('room');if(lsGet('electroplan.guide')!=='off')setTimeout(openGuide,300)};
+function openGuide(){$('#guideOff').checked=lsGet('electroplan.guide')==='off';$('#guideDlg').showModal()}
+$('#helpBtn').onclick=openGuide;
+$('#guideOk').onclick=()=>{lsSet('electroplan.guide',$('#guideOff').checked?'off':'on');$('#guideDlg').close()};
 $('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
 
 const dlg=$('#dlg');
@@ -2768,11 +2818,16 @@ function importText(s){
 }
 $('#ioImport').onclick=()=>importText($('#ioText').value);
 $('#ioFile').onchange=e=>{const fl=e.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>importText(String(rd.result));rd.readAsText(fl);e.target.value=''};
-$('#ioDel').onclick=e=>{
-  const b=e.currentTarget;if(!b.dataset.c){b.dataset.c='1';b.textContent='Apasă din nou pentru a șterge definitiv';return}
-  const gone=P.id;store.projects=store.projects.filter(x=>x.id!==gone);delete cloud.last[gone];queuePush(gone);if(!store.projects.length)store.projects.push(norm(blank('Proiect 1')));
-  dlg.close();openProject(store.projects[0]);toast('Proiect șters.');
-};
+$('#ioDel').onclick=()=>{dlg.close();deleteProject(P.id)};
+let introMenu=null;
+function touchProj(p){p.updated=Date.now();cloud.last[p.id]=pbody(p);queuePush(p.id);persist();renderProjSel()}
+function deleteProject(id){
+  const i=store.projects.findIndex(x=>x.id===id);if(i<0)return;const p=store.projects[i],wasCur=p===P;
+  store.projects.splice(i,1);delete cloud.last[id];queuePush(id);if(!store.projects.length)store.projects.push(norm(blank('Proiect 1')));
+  if(wasCur)openProject(store.projects[0]);else{persist();renderProjSel()}
+  toastAct(`„${p.name}” a fost șters.`,'Anulează',()=>{if(store.projects.some(x=>x.id===id))return;store.projects.push(p);touchProj(p);if(wasCur)openProject(p);if(!$('#intro').hidden)showIntro();toast('Proiect recuperat.')});
+}
+function toastAct(m,lab,fn){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.style.cssText='display:flex;gap:12px;align-items:center;z-index:60';t.innerHTML=`<span></span><button class="btn" type="button" style="padding:4px 10px">${esc(lab)}</button>`;t.firstChild.textContent=m;t.querySelector('button').onclick=()=>{t.remove();fn()};document.body.appendChild(t);setTimeout(()=>t.remove(),8000)}
 
 function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 function copy(s,msg){
@@ -2848,7 +2903,7 @@ function showIntro(){
   const el=$('#intro'),ps=store.projects.slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),last=ps.find(x=>!x.sample)||ps[0];
   const rel=t=>{if(!t)return'nesalvat încă';const d=(Date.now()-t)/1000;if(d<90)return'acum';if(d<3600)return Math.round(d/60)+' min în urmă';if(d<86400)return Math.round(d/3600)+' h în urmă';return new Date(t).toLocaleDateString('ro-RO')};
   $('#introActs').innerHTML=`${last?`<button class="ib pri" type="button" data-io="open" data-id="${last.id}">Continuă: ${esc(last.name.length>28?last.name.slice(0,27)+'…':last.name)}</button>`:''}<button class="ib${last?'':' pri'}" type="button" data-io="new">+ Proiect nou</button>${sb&&!sbUser?'<button class="ib" type="button" data-io="login">Conectează-te</button>':''}`;
-  $('#introRecent').innerHTML=ps.slice(0,6).map(x=>{const lv=Array.isArray(x.levels)?x.levels.length:1,rooms=(x.rooms||[]).filter(r=>!r.of).length+Object.values(x.lvData||{}).reduce((t,d)=>t+((d.rooms||[]).filter(r=>!r.of).length),0);return`<li><button type="button" data-io="open" data-id="${x.id}"><b>${esc(x.name)}</b><span>${x.sample?'exemplu':rel(x.updated)}</span><small>${rooms} ${rooms===1?'cameră':'camere'} · ${lv} ${lv===1?'nivel':'niveluri'}${x.client&&!x.sample?' · '+esc(x.client):''}</small></button></li>`}).join('')||'<li style="color:#8FA6BA">Nu ai încă proiecte. Începe cu „Proiect nou”.</li>';
+  $('#introRecent').innerHTML=ps.map(x=>{const lv=Array.isArray(x.levels)?x.levels.length:1,rooms=(x.rooms||[]).filter(r=>!r.of).length+Object.values(x.lvData||{}).reduce((t,d)=>t+((d.rooms||[]).filter(r=>!r.of).length),0);return`<li class="pli"><button type="button" data-io="open" data-id="${x.id}"><b>${esc(x.name)}</b><span>${x.sample?'exemplu':rel(x.updated)}</span><small>${rooms} ${rooms===1?'cameră':'camere'} · ${lv} ${lv===1?'nivel':'niveluri'}${x.client&&!x.sample?' · '+esc(x.client):''}</small></button><button class="pmenu" type="button" data-io="menu" data-id="${x.id}" aria-label="Opțiuni pentru ${esc(x.name)}" aria-expanded="${introMenu===x.id}">⋯</button>${introMenu===x.id?`<div class="pmenu-list"><button type="button" data-io="ren" data-id="${x.id}">Redenumește</button><button type="button" data-io="dup" data-id="${x.id}">Duplică</button><button type="button" data-io="del" data-id="${x.id}" class="dng">Șterge</button></div>`:''}</li>`}).join('')||'<li style="color:#8FA6BA">Nu ai încă proiecte. Începe cu „Proiect nou”.</li>';
   try{$('#introSkip').checked=localStorage.getItem('electroplan.noIntro')==='1'}catch(e){}
   const g=gated();$('#authBox').hidden=!g;$('#introActs').hidden=g;$('.intro-card:not(#authBox)').hidden=g;$('#introSkip').closest('label').hidden=g;
   if(g&&authMode!=='reset')setAuthMode(authMode==='up'||authMode==='forgot'?authMode:'in');
@@ -2857,7 +2912,11 @@ function showIntro(){
 function hideIntro(){if(gated())return;$('#intro').hidden=true;requestAnimationFrame(resize)}
 $('#intro').addEventListener('click',e=>{
   const b=e.target.closest('[data-io]');if(!b)return;const k=b.dataset.io;
-  if(k==='open'){const p2=store.projects.find(x=>x.id===b.dataset.id);hideIntro();if(p2&&p2!==P)openProject(p2)}
+  if(k==='open'){const p2=store.projects.find(x=>x.id===b.dataset.id);introMenu=null;hideIntro();if(p2&&p2!==P)openProject(p2)}
+  else if(k==='menu'){introMenu=introMenu===b.dataset.id?null:b.dataset.id;showIntro()}
+  else if(k==='ren'){const p2=store.projects.find(x=>x.id===b.dataset.id);if(!p2)return;const nm=prompt('Numele proiectului',p2.name);if(nm&&nm.trim()){p2.name=nm.trim().slice(0,80);touchProj(p2)}introMenu=null;showIntro()}
+  else if(k==='dup'){const p2=store.projects.find(x=>x.id===b.dataset.id);if(!p2)return;const c=norm(JSON.parse(JSON.stringify(p2)));c.id=uid();c.name=p2.name+' (copie)';c.sample=false;store.projects.push(c);touchProj(c);introMenu=null;showIntro();toast('Proiect duplicat.')}
+  else if(k==='del'){introMenu=null;deleteProject(b.dataset.id);showIntro()}
   else if(k==='new'){hideIntro();$('#newProj').click();setTool('schita')}
   else if(k==='login'){hideIntro();$('#accBtn').click()}
 });
