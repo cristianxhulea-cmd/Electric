@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ElectroPlan">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="app-version" content="1e51c9ddd5d3">
+<meta name="app-version" content="6b7af7511039">
 </head>
 <body>
 <title>ElectroPlan</title>
@@ -1259,10 +1259,10 @@ let isoId='';
 const isoC=()=>isoId&&R?R.circuits.find(c=>c.id===isoId)||null:null;
 function renderIso(){
   const el=$('#isoSel');if(!el)return;if(isoId&&!isoC())isoId='';
-  el.innerHTML=`<option value="">Toate traseele</option>`+(R?R.circuits.map(c=>`<option value="${c.id}"${c.id===isoId?' selected':''}>${c.id} · ${esc(c.name)} · ${f(c.len,1)} m</option>`).join(''):'');
+  el.innerHTML=`<option value=""${!isoId&&layers.routes?' selected':''}>Toate traseele</option><option value="__off"${!isoId&&!layers.routes?' selected':''}>Fără trasee</option>`+(R?R.circuits.map(c=>`<option value="${c.id}"${c.id===isoId?' selected':''}>${c.id} · ${esc(c.name)} · ${f(c.len,1)} m</option>`).join(''):'');
   el.classList.toggle('on',!!isoId);
 }
-function setIso(id){isoId=id||'';renderIso();if(tab!=='plan')showTab('plan');draw();renderDyn()}
+function setIso(id){if(id==='__off'){isoId='';layers.routes=false}else{isoId=id||'';layers.routes=true}renderLayers();renderIso();if(tab!=='plan')showTab('plan');draw();renderDyn()}
 function hitStruct(X,Y){
   let b=null,bd=12;
   for(const st of P.struct){const a=Math.min(st.a,st.b),c=Math.max(st.a,st.b),A=st.o==='h'?{x:a,y:st.c}:{x:st.c,y:a},B=st.o==='h'?{x:c,y:st.c}:{x:st.c,y:c},ax=sx(A.x),ay=sy(A.y),bx=sx(B.x),by=sy(B.y);
@@ -1805,7 +1805,7 @@ function renderLayers(){
   const L=[['routes','Trasee'],['boxes','Doze'],['cmd','Comenzi'],['tags','Circuite'],['dims','Cote']];
   $('#layers').innerHTML=L.map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
 }
-$('#layers').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;layers[b.dataset.layer]=!layers[b.dataset.layer];b.setAttribute('aria-pressed',layers[b.dataset.layer]);draw()});
+$('#layers').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;layers[b.dataset.layer]=!layers[b.dataset.layer];b.setAttribute('aria-pressed',layers[b.dataset.layer]);if(b.dataset.layer==='routes'){if(!layers.routes)isoId='';renderIso()}draw()});
 
 const opt=(o,v)=>Object.entries(o).map(([k,n])=>`<option value="${k}"${k===v?' selected':''}>${esc(n)}</option>`).join('');
 function renderInspector(){
