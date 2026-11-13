@@ -303,6 +303,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <button role="tab" data-tab="plan" aria-selected="true" type="button">Plan</button>
       <button role="tab" data-tab="calcul" aria-selected="false" type="button">Circuite</button>
       <button role="tab" data-tab="materiale" aria-selected="false" type="button">Materiale</button>
+      <button role="tab" data-tab="oferta" aria-selected="false" type="button">Ofertă</button>
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
     </nav>
     <div class="acts">
@@ -338,6 +339,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
     </section>
     <section class="view doc" id="v-calcul" hidden></section>
     <section class="view doc" id="v-materiale" hidden></section>
+    <section class="view doc" id="v-oferta" hidden></section>
     <section class="view doc" id="v-lucrari" hidden></section>
   </main>
 </div>
@@ -652,6 +654,14 @@ let R=null,tool='select',sel=null,undoS=[],redoS=[],tab='plan',editTask=null,hov
 const layers={routes:true,boxes:true,tags:true,dims:true,cmd:false};
 const view={s:60,ox:40,oy:40,rot:0};
 const cloud={db:null,col:null,seen:false,busy:false,queue:new Set(),last:{}};
+const CFG0=()=>({updated:0,firm:{tva:true,cota:21},prices:{},names:{},labor:{},offer:{valid:30,avans:50,garantie:'24 de luni pentru manoperă',termen:'',mat:'incl'},next:1});
+let cfg=CFG0();
+const cfgId=()=>'cfg-'+(typeof sbUser!=='undefined'&&sbUser?sbUser.id:'local');
+const isCfg=id=>String(id).startsWith('cfg-');
+function cfgNorm(o){const d=CFG0(),c=Object.assign(d,o||{});for(const k of['firm','prices','names','labor','offer'])c[k]=Object.assign({},d[k],(o||{})[k]||{});return c}
+function loadCfg(){try{cfg=cfgNorm(JSON.parse(localStorage.getItem(KEY+':cfg')||'null'))}catch(e){cfg=CFG0()}}
+function saveCfg(){cfg.updated=Date.now();try{localStorage.setItem(KEY+':cfg',JSON.stringify(cfg))}catch(e){}if(cloud.col){cloud.queue.add(cfgId());flush()}}
+loadCfg();
 const pbody=p=>{const{updated,...rest}=p;return JSON.stringify(rest)};
 const markSaved=p=>{cloud.last[p.id]=pbody(p)};
 store.projects.forEach(markSaved);
@@ -664,7 +674,7 @@ async function flush(){
   while(cloud.queue.size){
     const id=cloud.queue.values().next().value;cloud.queue.delete(id);
     const p=store.projects.find(x=>x.id===id);
-    try{if(p)await cloud.col.doc(id).set({p:JSON.parse(JSON.stringify(p)),updated:p.updated||0,name:p.name});else await cloud.col.doc(id).delete();fails=0}
+    try{if(isCfg(id))await cloud.col.doc(id).set({p:JSON.parse(JSON.stringify(cfg)),updated:cfg.updated||0,name:'__cfg'});else if(p)await cloud.col.doc(id).set({p:JSON.parse(JSON.stringify(p)),updated:p.updated||0,name:p.name});else await cloud.col.doc(id).delete();fails=0}
     catch(e){
       const c=e&&e.code;
       if(c==='invalid_argument'||c==='not_granted'||c==='revoked'){cloud.busy=false;setSync('ro');if(cloud.col===sbCol)checkSession();return}
@@ -677,7 +687,10 @@ async function flush(){
 }
 function onRemote(snap){
   const first=!cloud.seen;cloud.seen=true;let cur=false;
-  const remote=new Map(snap.docs.map(d=>[d.id,d.data()]).filter(([,r])=>r&&r.p));
+  {const cd=snap.docs.find(d=>d.id===cfgId()),rc=cd&&cd.data();
+    if(rc&&rc.p&&(rc.updated||0)>(cfg.updated||0)){cfg=cfgNorm(rc.p);cfg.updated=rc.updated;try{localStorage.setItem(KEY+':cfg',JSON.stringify(cfg))}catch(e){}if(tab==='materiale'||tab==='oferta')renderTab()}
+    else if(first&&(cfg.updated||0)>((rc&&rc.updated)||0))queuePush(cfgId())}
+  const remote=new Map(snap.docs.map(d=>[d.id,d.data()]).filter(([id,r])=>r&&r.p&&!isCfg(id)));
   if(first){
     if(remote.size)store.projects=store.projects.filter(p=>!p.sample||remote.has(p.id));
     for(const p of store.projects){if(p.sample)continue;const r=remote.get(p.id);if(!r||(p.updated||0)>(r.updated||0))queuePush(p.id)}
@@ -2086,22 +2099,24 @@ function genTasksAll(){
   const circs=RA.boards.length?RA.boards.flatMap(b=>b.circuits):RA.levels.flatMap(x=>x.R.circuits);
   return genTasks({...P,items},{circuits:circs,tot:RA.boards[0]?RA.boards[0].tot:null,by},materialsAll());
 }
-function laborBase(p){return p.labor||{}}
+function laborBase(p){const a=p.labor||{},b=cfg.labor||{};return{...a,...b,mult:{...(a.mult||{}),...(b.mult||{})}}}
 function derivedPrice(p,k){const lb=laborBase(p),mt=k.split(':')[2],mult=+((lb.mult||{})[mt]??WMULT[mt]);if(k.startsWith('man:slit:')&&+lb.slit)return +lb.slit*mult;if(k.startsWith('man:dz:')&&+lb.doza)return +lb.doza*mult;return 0}
-const priceOf=k=>P.prices[k]!=null?+P.prices[k]:derivedPrice(P,k);
+const priceOf=k=>P.prices[k]!=null?+P.prices[k]:cfg.prices[k]!=null?+cfg.prices[k]:derivedPrice(P,k);
+function migratePrices(){if(cfg.migrated)return;let n=0;const ps=store.projects.slice().sort((a,b)=>(a.updated||0)-(b.updated||0));for(const p of ps){for(const[k,v]of Object.entries(p.prices||{}))if(cfg.prices[k]==null){cfg.prices[k]=v;n++}for(const[k,v]of Object.entries(p.labor||{}))if(k!=='mult'&&cfg.labor[k]==null)cfg.labor[k]=v}cfg.migrated=true;if(n)saveCfg()}
+const money=v=>(+v||0).toLocaleString('ro-RO',{minimumFractionDigits:2,maximumFractionDigits:2});
 function renderMat(){
-  const el=$('#v-materiale'),L=materialsAll();
+  if(renderMat.busy)return;{const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#v-materiale')){renderMat.busy=true;ae.blur();renderMat.busy=false}}migratePrices();const el=$('#v-materiale'),L=materialsAll();
   if(!L.length){el.innerHTML=`<div class="wrap"><h1>Necesar de materiale</h1><div class="empty">Lista apare după ce pui camere, elemente și tabloul pe plan.</div></div>`;return}
   let cat='',body='';
   for(const m of L){
     if(m.cat!==cat){cat=m.cat;body+=`<tr class="cat"><td colspan="5">${esc(cat)}</td></tr>`}
-    const pr=P.prices[m.key],dp=derivedPrice(P,m.key),ep=priceOf(m.key);
+    const pr=P.prices[m.key]??cfg.prices[m.key],dp=derivedPrice(P,m.key),ep=priceOf(m.key);
     body+=`<tr><td>${esc(m.name)}</td><td>${m.um}</td><td class="n">${m.q}</td><td class="n"><input class="pin" type="number" inputmode="decimal" min="0" step=".01" data-pk="${esc(m.key)}" id="pr-${esc(m.key.replace(/[^a-z0-9]/gi,'_'))}" value="${pr??''}" placeholder="${dp?f(dp,2):'0,00'}" aria-label="Preț unitar ${esc(m.name)}"></td><td class="n" data-v="${esc(m.key)}">${ep?f(ep*m.q,2):'—'}</td></tr>`;
   }
   el.innerHTML=`<div class="wrap">
     <h1>Necesar de materiale</h1>
-    <p class="lede">Cantități calculate din lungimile traseelor, cu ${P.reserve} % rezervă la cablu. Completează prețurile unitare ca să obții valoarea ofertei.</p>
-    <div class="bar"><button class="btn pri" type="button" id="matCopy">Copiază tabelul pentru Excel</button></div>
+    <p class="lede">Cantități calculate din lungimile traseelor, cu ${P.reserve} % rezervă la cablu. Prețurile unitare se salvează în catalogul tău și se folosesc automat în toate proiectele.</p>
+    <div class="bar"><button class="btn pri" type="button" id="matCopy">Copiază tabelul pentru Excel</button><button class="btn" type="button" id="catExp">Exportă catalogul (CSV)</button><label class="btn" for="catImp">Importă catalogul (CSV)</label><input type="file" id="catImp" accept=".csv,text/csv,.txt" hidden><button class="btn" type="button" id="toOffer">Ofertă pentru client →</button></div>
     <div class="tbl"><table><thead><tr><th>Material</th><th>UM</th><th class="n">Cantitate</th><th class="n">Preț unitar (lei)</th><th class="n">Valoare (lei)</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="4">Total (fără TVA)</td><td class="n" id="matTot"></td></tr></tfoot></table></div>
     <div class="card">
       <h2>Manoperă de șlițuire</h2>
@@ -2118,20 +2133,23 @@ function renderMat(){
 }
 function matTotal(L){L=L||materialsAll();const t=L.reduce((s,m)=>s+(priceOf(m.key)||0)*m.q,0);const e=$('#matTot');if(e)e.textContent=t?f(t,2):'—'}
 $('#v-materiale').addEventListener('change',e=>{
+  if(e.target.id==='catImp'){const fl=e.target.files[0];e.target.value='';if(fl)importCatalog(fl);return}
   const lk=e.target.dataset.lab,mk=e.target.dataset.mult;if(!lk&&!mk)return;
   P.labor=P.labor||{};
   if(lk==='wallMat'){P.wallMat=e.target.value;changed();renderMat();return}
-  if(lk){const v=parseFloat(e.target.value);if(isFinite(v)&&v>=0)P.labor[lk]=v;else delete P.labor[lk]}
-  if(mk){const v=parseFloat(e.target.value);P.labor.mult=P.labor.mult||{};if(isFinite(v)&&v>0)P.labor.mult[mk]=v;else delete P.labor.mult[mk]}
-  save();renderMat();
+  if(lk){const v=parseFloat(e.target.value);delete P.labor[lk];if(isFinite(v)&&v>=0)cfg.labor[lk]=v;else delete cfg.labor[lk]}
+  if(mk){const v=parseFloat(e.target.value);if(P.labor.mult)delete P.labor.mult[mk];cfg.labor.mult=cfg.labor.mult||{};if(isFinite(v)&&v>0)cfg.labor.mult[mk]=v;else delete cfg.labor.mult[mk]}
+  saveCfg();save();renderMat();
 });
 $('#v-materiale').addEventListener('input',e=>{
   const k=e.target.dataset.pk;if(!k)return;const v=parseFloat(e.target.value);
-  if(isFinite(v)&&v>0)P.prices[k]=v;else delete P.prices[k];
   const L=materialsAll(),m=L.find(x=>x.key===k),c=[...document.querySelectorAll('[data-v]')].find(x=>x.dataset.v===k);
-  if(c&&m)c.textContent=priceOf(k)?f(priceOf(k)*m.q,2):'—';matTotal(L);save();
+  const had=P.prices[k]!=null;delete P.prices[k];if(isFinite(v)&&v>0){cfg.prices[k]=v;if(m)cfg.names[k]=m.name}else delete cfg.prices[k];
+  if(c&&m)c.textContent=priceOf(k)?f(priceOf(k)*m.q,2):'—';matTotal(L);clearTimeout(saveCfg.t);saveCfg.t=setTimeout(saveCfg,600);if(had)save();
 });
 $('#v-materiale').addEventListener('click',e=>{
+  if(e.target.id==='toOffer'){showTab('oferta');return}
+  if(e.target.id==='catExp'){exportCatalog();return}
   if(e.target.id!=='matCopy')return;
   const L=materialsAll(),rows=[['Categorie','Material','UM','Cantitate','Preț unitar','Valoare']];
   L.forEach(m=>{const p=priceOf(m.key)||0;rows.push([m.cat,m.name,m.um,m.q,p?f(p,2):'',p?f(p*m.q,2):''])});
@@ -2200,10 +2218,10 @@ vW.addEventListener('click',e=>{
 
 function showTab(t){
   tab=t;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
-  ['plan','calcul','materiale','lucrari'].forEach(k=>{$('#v-'+k).hidden=k!==t});
+  ['plan','calcul','materiale','oferta','lucrari'].forEach(k=>{$('#v-'+k).hidden=k!==t});
   if(t==='plan')requestAnimationFrame(resize);else renderTab();
 }
-function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='lucrari')renderWork()}
+function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='oferta')renderOffer();else if(tab==='lucrari')renderWork()}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});
 
 function changed(full){R=computeLv();renderIso();renderLevels();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
@@ -2287,9 +2305,204 @@ async function exportPdf(){
   if(P.lvCur!==lv0)switchLevel(lv0);resize();
   const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a3',compress:true});
   imgs.forEach((im,i)=>{if(i)doc.addPage('a3','landscape');doc.addImage(im,'JPEG',0,0,420,297)});
-  const blob=doc.output('blob'),name=(P.name||'proiect').replace(/[^\w\-ăâîșțĂÂÎȘȚ ]+/g,'').trim().replace(/\s+/g,'_')+'_instalatie_electrica.pdf';
-  try{if(window.claude&&typeof window.claude.use==='function'){const d=await window.claude.use('downloads');if(d){await d.save({filename:name,data:blob});toast('PDF salvat.');return}}}catch(e){if(e&&e.code==='declined'){toast('Salvarea a fost anulată.');return}}
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('PDF descărcat.');
+  const blob=doc.output('blob'),name=fileBase()+'_instalatie_electrica.pdf';
+  await saveBlob(blob,name,['PDF-ul a fost salvat.','PDF-ul a fost descărcat.']);
+}
+const fileBase=()=>(P.name||'proiect').replace(/[^\w\-ăâîșțĂÂÎȘȚ ]+/g,'').trim().replace(/\s+/g,'_')||'proiect';
+async function saveBlob(blob,name,msg){
+  try{if(window.claude&&typeof window.claude.use==='function'){const d=await window.claude.use('downloads');if(d){await d.save({filename:name,data:blob});toast(msg[0]);return}}}catch(e){if(e&&e.code==='declined'){toast('Salvarea a fost anulată.');return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast(msg[1]);
+}
+const numRo=v=>(+v||0).toFixed(2).replace('.',',');
+function exportCatalog(){
+  const L=materialsAll(),seen=new Set(),rows=[['Cod','Material','UM','Pret unitar (lei)']];
+  for(const m of L){seen.add(m.key);const p=cfg.prices[m.key];rows.push([m.key,m.name,m.um,p!=null?numRo(p):''])}
+  for(const[k,p]of Object.entries(cfg.prices))if(!seen.has(k))rows.push([k,cfg.names[k]||k,'',numRo(p)]);
+  const q=v=>/[;"\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':String(v);
+  saveBlob(new Blob(['﻿'+rows.map(r=>r.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'catalog_preturi_electroplan.csv',['Catalogul a fost salvat.','Catalogul a fost descărcat. Îl poți edita în Excel și îl imporți înapoi.']);
+}
+function parseCsv(t){
+  t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'',sep=[';','\t',','].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const out=[];let row=[],cell='',qt=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];if(qt){if(ch==='"'&&t[i+1]==='"'){cell+='"';i++}else if(ch==='"')qt=false;else cell+=ch}else if(ch==='"')qt=true;else if(ch===sep){row.push(cell);cell=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cell);out.push(row);row=[];cell=''}else cell+=ch}
+  if(cell||row.length){row.push(cell);out.push(row)}
+  return out.filter(r=>r.some(c=>c.trim()));
+}
+async function importCatalog(file){
+  let rows;try{rows=parseCsv(await file.text())}catch(e){toast('Nu pot citi fișierul.');return}
+  if(!rows.length){toast('Fișierul e gol.');return}
+  const L=materialsAll(),byName=new Map(),norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
+  for(const m of L)byName.set(norm(m.name),m.key);for(const[k,n]of Object.entries(cfg.names))byName.set(norm(n),k);
+  const keys=new Set([...L.map(m=>m.key),...Object.keys(cfg.prices)]);
+  const pnum=v=>{v=String(v||'').replace(/[^\d,.\-]/g,'');if(/,\d{1,2}$/.test(v))v=v.replace(/\./g,'').replace(',','.');else v=v.replace(/,/g,'');return parseFloat(v)};
+  let ok=0,bad=0;
+  for(const r of rows){
+    const pc=[...r].reverse().find(c=>isFinite(pnum(c))&&String(c).trim()!=='');const price=pc==null?NaN:pnum(pc);
+    let key=r.map(c=>c.trim()).find(c=>keys.has(c));if(!key)for(const c of r){const k=byName.get(norm(c));if(k){key=k;break}}
+    if(!key||!isFinite(price)||price<=0){if(r.some(c=>/\d/.test(c)))bad++;continue}
+    cfg.prices[key]=price;const nm=(L.find(m=>m.key===key)||{}).name;if(nm)cfg.names[key]=nm;delete P.prices[key];ok++;
+  }
+  saveCfg();save();renderMat();toast(`Am importat ${ok} ${ok===1?'preț':'prețuri'}${bad?`, ${bad} ${bad===1?'rând nerecunoscut':'rânduri nerecunoscute'}`:''}.`);
+}
+function offerOf(p){const o=cfg.offer;p.offer=Object.assign({date:'',valid:o.valid,avans:o.avans,garantie:o.garantie,termen:o.termen,mat:o.mat,disc:0,note:''},p.offer||{});return p.offer}
+function offerCalc(){
+  const L=materialsAll(),o=offerOf(P),fi=cfg.firm;
+  const mats=L.filter(m=>m.cat!=='Manoperă'),lab=L.filter(m=>m.cat==='Manoperă');
+  const val=m=>(priceOf(m.key)||0)*m.q,incl=o.mat!=='client';
+  const tm=mats.reduce((t,m)=>t+val(m),0),tl=lab.reduce((t,m)=>t+val(m),0);
+  const base=(incl?tm:0)+tl,disc=base*Math.min(100,Math.max(0,+o.disc||0))/100,net=base-disc,tva=fi.tva?net*(+fi.cota||0)/100:0;
+  const miss=[...(incl?mats:[]),...lab].filter(m=>!priceOf(m.key)).length;
+  return{L,mats,lab,tm,tl,base,disc,net,tva,tot:net+tva,incl,miss,o,fi};
+}
+function offerScope(){
+  if(!RA)R=computeLv();const items=RA.levels.flatMap(x=>lvGet(P,x.id).items),cn=g=>items.filter(i=>T[i.type].g===g).reduce((t,i)=>t+ptsOf(i),0);
+  const circ=RA.boards.reduce((t,b)=>t+b.circuits.length,0),tb=RA.boards[0]&&RA.boards[0].tot;
+  const parts=[];if(circ)parts.push(`${circ} circuite`);if(tb)parts.push(`tablou electric ${tb.panel} module`);
+  const pr=cn('priza'),lu=items.filter(i=>T[i.type].g==='lum').length,sw=cn('intr'),de=items.filter(i=>T[i.type].g==='ded').length;
+  if(pr)parts.push(`${pr} ${pr===1?'priză':'prize'}`);if(lu)parts.push(`${lu} ${lu===1?'corp de iluminat':'corpuri de iluminat'}`);if(sw)parts.push(`${sw} ${sw===1?'întrerupător':'întrerupătoare'}`);if(de)parts.push(`${de} ${de===1?'consumator cu circuit dedicat':'consumatori cu circuit dedicat'}`);
+  return parts.join(', ');
+}
+const dRo=d=>{const x=d?new Date(d+'T12:00'):new Date();return isNaN(x)?'':x.toLocaleDateString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric'})};
+const isoD=d=>d.toISOString().slice(0,10);
+function offerStats(c){const o=c.o,fi=c.fi;return`<div class="stat"><span>Materiale</span><b>${c.incl?money(c.tm):'—'}</b><small>${c.incl?'lei fără TVA':'procurate de beneficiar'}</small></div>
+      <div class="stat"><span>Manoperă</span><b>${money(c.tl)}</b><small>lei fără TVA</small></div>
+      <div class="stat"><span>Total fără TVA</span><b>${money(c.net)}</b><small>${c.disc?'după discount '+f(+o.disc,1)+' %':'lei'}</small></div>
+      <div class="stat"><span>${fi.tva?'Total cu TVA '+f(+fi.cota||0,0)+' %':'Total de plată'}</span><b>${money(c.tot)}</b><small>${fi.tva?'lei':'neplătitor de TVA'}</small></div>`}
+function renderOffer(){
+  if(renderOffer.busy)return;{const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#v-oferta')){renderOffer.busy=true;ae.blur();renderOffer.busy=false}}migratePrices();const el=$('#v-oferta'),c=offerCalc(),o=c.o,fi=c.fi;
+  if(!c.L.length){el.innerHTML=`<div class="wrap"><h1>Ofertă</h1><div class="empty">Oferta apare după ce pui camere, elemente și tabloul pe plan.</div></div>`;return}
+  const F=(k,lb,v,t='text',ex='')=>`<label class="f">${lb}<input data-fi="${k}" type="${t}" value="${esc(v??'')}" ${ex}></label>`;
+  const O=(k,lb,v,t='text',ex='')=>`<label class="f">${lb}<input data-of="${k}" type="${t}" value="${esc(v??'')}" ${ex}></label>`;
+  const Cl=(k,lb,v,t='text')=>`<label class="f">${lb}<input data-pc="${k}" type="${t}" value="${esc(v??'')}"></label>`;
+  el.innerHTML=`<div class="wrap">
+    <h1>Ofertă pentru client</h1>
+    <p class="lede">Oferta folosește cantitățile din plan și prețurile din catalogul tău. Datele firmei și condițiile se păstrează pentru toate ofertele.</p>
+    <div class="stats" id="offStats">${offerStats(c)}</div>
+    ${c.miss?`<div class="warns"><li style="list-style:none">${c.miss} ${c.miss===1?'poziție nu are':'poziții nu au'} preț. Completează-le în <button class="btn" type="button" data-go="materiale" style="padding:2px 8px">Materiale</button>, altfel apar cu 0 în ofertă.</li></div>`:''}
+    <div class="bar"><button class="btn pri" type="button" id="offPdf">Descarcă oferta PDF</button>${!fi.name?'<span class="muted" style="font-size:13px">Completează întâi numele firmei, mai jos.</span>':''}</div>
+    <div class="card">
+      <h2>Client și lucrare</h2>
+      <div class="cfields">${Cl('client','Beneficiar',P.client)}${Cl('adresa','Adresa lucrării',P.adresa)}${Cl('telefon','Telefon',P.telefon,'tel')}</div>
+    </div>
+    <div class="card">
+      <h2>Condițiile ofertei</h2>
+      <div class="cfields">
+        ${O('nr','Număr ofertă',o.nr??'','text',`placeholder="${cfg.next} (automat)"`)}
+        ${O('date','Data ofertei',o.date||isoD(new Date()),'date')}
+        ${O('valid','Valabilitate (zile)',o.valid,'number','min="1" step="1" inputmode="numeric"')}
+        ${O('avans','Avans (%)',o.avans,'number','min="0" max="100" step="5" inputmode="numeric"')}
+        ${O('disc','Discount (%)',o.disc||'','number','min="0" max="100" step=".5" inputmode="decimal" placeholder="0"')}
+        <label class="f">Materialele<select data-of="mat"><option value="incl"${o.mat!=='client'?' selected':''}>Incluse în ofertă</option><option value="client"${o.mat==='client'?' selected':''}>Procurate de beneficiar</option></select></label>
+        ${O('termen','Termen de execuție',o.termen,'text','placeholder="ex. 10 zile lucrătoare de la avans"')}
+        ${O('garantie','Garanție',o.garantie)}
+      </div>
+      <label class="f">Mențiuni (apar în ofertă)<textarea data-of="note" rows="3" style="min-height:70px;font-family:inherit;font-size:14px" placeholder="ex. Nu include corpurile de iluminat decorative.">${esc(o.note||'')}</textarea></label>
+    </div>
+    <div class="card">
+      <h2>Datele firmei tale</h2>
+      <p class="muted" style="margin:0;font-size:13px">Se completează o singură dată și apar pe toate ofertele.</p>
+      <div class="cfields">
+        ${F('name','Nume firmă / PFA',fi.name)}${F('cui','CUI',fi.cui)}${F('reg','Nr. Registrul Comerțului',fi.reg)}
+        ${F('addr','Adresă sediu',fi.addr)}${F('tel','Telefon',fi.tel,'tel')}${F('email','E-mail',fi.email,'email')}
+        ${F('iban','IBAN',fi.iban)}${F('bank','Banca',fi.bank)}${F('anre','Autorizație ANRE (nr., grad)',fi.anre)}
+        ${F('person','Persoană de contact',fi.person)}
+        <label class="f">TVA<select data-fi="tva"><option value="1"${fi.tva?' selected':''}>Plătitor de TVA</option><option value="0"${!fi.tva?' selected':''}>Neplătitor de TVA</option></select></label>
+        ${fi.tva?F('cota','Cota TVA (%)',fi.cota??21,'number','min="0" max="30" step="1" inputmode="numeric"'):''}
+      </div>
+      <div class="bar">${fi.logo?`<img src="${fi.logo}" alt="Logo" style="max-height:56px;max-width:200px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px">`:''}<label class="btn" for="logoIn">${fi.logo?'Schimbă logo-ul':'Adaugă logo'}</label><input type="file" id="logoIn" accept="image/*" hidden>${fi.logo?'<button class="btn dng" type="button" id="logoDel">Șterge logo-ul</button>':''}</div>
+    </div>
+  </div>`;
+}
+const vO=$('#v-oferta');
+vO.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='logoIn'){const fl=t.files[0];t.value='';if(!fl)return;const im=new Image();im.onload=()=>{const k=Math.min(1,600/im.width,240/im.height),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const g=c.getContext('2d');g.drawImage(im,0,0,c.width,c.height);cfg.firm.logo=c.toDataURL('image/png');URL.revokeObjectURL(im.src);saveCfg();renderOffer()};im.onerror=()=>toast('Nu pot citi imaginea.');im.src=URL.createObjectURL(fl);return}
+  if(t.dataset.fi==='tva'){cfg.firm.tva=t.value==='1';saveCfg();renderOffer();return}
+  if(t.dataset.of==='mat'){offerOf(P).mat=t.value;cfg.offer.mat=t.value;saveCfg();save();renderOffer();return}
+  if(t.dataset.of==='date'){offerOf(P).date=t.value;save();return}
+});
+vO.addEventListener('input',e=>{
+  const t=e.target,v=t.value;
+  if(t.dataset.fi){const k=t.dataset.fi;cfg.firm[k]=k==='cota'?(parseFloat(v)||0):v;clearTimeout(saveCfg.t);saveCfg.t=setTimeout(saveCfg,600)}
+  else if(t.dataset.of){const k=t.dataset.of,o=offerOf(P),num=['valid','avans','disc'].includes(k);o[k]=num?(v===''?'':parseFloat(v)):v;if(['valid','avans','garantie','termen'].includes(k)){cfg.offer[k]=o[k];clearTimeout(saveCfg.t);saveCfg.t=setTimeout(saveCfg,600)}save()}
+  else if(t.dataset.pc){P[t.dataset.pc]=v;save()}
+  if(t.dataset.of==='disc'||t.dataset.fi==='cota'){const st=$('#offStats');if(st)st.innerHTML=offerStats(offerCalc())}
+});
+vO.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');if(g){showTab(g.dataset.go);return}
+  if(e.target.id==='logoDel'){delete cfg.firm.logo;saveCfg();renderOffer();return}
+  if(e.target.id==='offPdf')exportOffer();
+});
+async function exportOffer(){
+  const c=offerCalc(),o=c.o,fi=c.fi;
+  if(!fi.name){toast('Completează numele firmei în „Datele firmei tale”.');const i=vO.querySelector('[data-fi="name"]');if(i){i.scrollIntoView({block:'center'});i.focus()}return}
+  toast('Pregătesc oferta…');
+  try{await loadJsPDF()}catch(e){toast('Nu am putut încărca generatorul de PDF. Verifică conexiunea la internet.');return}
+  if(o.nr==null||o.nr===''){o.nr=String(cfg.next);cfg.next=(+cfg.next||1)+1;saveCfg();save()}
+  if(!o.date){o.date=isoD(new Date());save()}
+  const W2=1240,H2=1754,M=84,SANS='"IBM Plex Sans",Arial,sans-serif',pages=[];let g,y;
+  const font=(w,sz)=>{g.font=`${w} ${sz}px ${SANS}`};
+  const newPage=()=>{const cv=document.createElement('canvas');cv.width=W2;cv.height=H2;g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W2,H2);g.textBaseline='alphabetic';pages.push(cv);y=M};
+  const room=h=>{if(y+h>H2-M-50){newPage();return true}return false};
+  const wrap=(t,w)=>{const out=[];for(const para of String(t||'').split('\n')){let line='';for(const wd of para.split(/\s+/)){const tt=line?line+' '+wd:wd;if(g.measureText(tt).width>w&&line){out.push(line);line=wd}else line=tt}out.push(line)}return out};
+  const text=(t,x,yy,col,al)=>{g.fillStyle=col||'#111';g.textAlign=al||'left';g.fillText(t,x,yy);g.textAlign='left'};
+  newPage();
+  let lh=0;
+  if(fi.logo){const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=fi.logo});if(im){const k=Math.min(320/im.width,110/im.height);g.drawImage(im,M,y,im.width*k,im.height*k);lh=im.height*k+18}}
+  let fy=y+lh+26;font(700,28);text(fi.name,M,fy);fy+=30;font(400,18);
+  for(const l of[[fi.cui&&'CUI '+fi.cui,fi.reg&&'Reg. Com. '+fi.reg].filter(Boolean).join(' · '),fi.addr,[fi.tel&&'Tel. '+fi.tel,fi.email].filter(Boolean).join(' · '),fi.anre&&'Autorizație ANRE: '+fi.anre].filter(Boolean)){text(l,M,fy,'#333');fy+=25}
+  g.font=`700 64px "Barlow Condensed","Arial Narrow",sans-serif`;text('OFERTĂ DE PREȚ',W2-M,y+60,'#111','right');
+  font(500,20);const dd=new Date(o.date+'T12:00'),vu=new Date(dd);vu.setDate(vu.getDate()+(+o.valid||30));
+  text(`Nr. ${o.nr} din ${dRo(o.date)}`,W2-M,y+98,'#333','right');text(`Valabilă până la ${vu.toLocaleDateString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric'})}`,W2-M,y+126,'#333','right');
+  y=Math.max(fy,y+150)+10;g.fillStyle='#18222C';g.fillRect(M,y,W2-2*M,4);y+=44;
+  const kv=(k,v)=>{font(600,19);text(k,M,y,'#555');font(400,20);const ls=wrap(v,W2-2*M-190);ls.forEach((l,i)=>text(l,M+190,y+i*27));y+=ls.length*27+6};
+  kv('Beneficiar',P.client||'—');if(P.adresa)kv('Adresa lucrării',P.adresa);if(P.telefon)kv('Telefon',P.telefon);
+  kv('Obiect','Execuție instalație electrică interioară'+(P.name?' — '+P.name:''));
+  const sc=offerScope();if(sc)kv('Cuprinde',sc[0].toUpperCase()+sc.slice(1)+'.');
+  y+=18;
+  const cols=c.incl?[['Nr.',60,'l'],['Denumire',560,'l'],['UM',70,'c'],['Cant.',100,'r'],['Preț unitar',140,'r'],['Valoare',142,'r']]:[['Nr.',60,'l'],['Denumire',790,'l'],['UM',90,'c'],['Cant.',132,'r']];
+  const tw=cols.reduce((t,x)=>t+x[1],0),X0=M;
+  const head=()=>{g.fillStyle='#EEF1EC';g.fillRect(X0,y,tw,40);font(700,17);let x=X0;for(const[n,w,a]of cols){text(n,a==='r'?x+w-10:a==='c'?x+w/2:x+10,y+26,'#333',a==='r'?'right':a==='c'?'center':'left');x+=w}y+=40};
+  const table=(title,list,priced,sub)=>{
+    room(140);font(700,24);text(title,M,y+6);y+=24;head();let n=0,cat='';
+    for(const m of list){
+      if(m.cat!==cat&&list!==c.lab){cat=m.cat;if(room(76))head();font(700,15);text(cat.toUpperCase(),X0+10,y+26,'#666');y+=36}
+      font(400,18);const ls=wrap(m.name,cols[1][1]-20),h=Math.max(38,ls.length*24+14);if(room(h))head();font(400,18);
+      n++;let x=X0;const pu=priceOf(m.key)||0,vals=priced?[String(n),'',m.um,String(m.q),money(pu),money(pu*m.q)]:[String(n),'',m.um,String(m.q)];
+      cols.forEach(([,w,a],k)=>{if(k===1)ls.forEach((l,i)=>text(l,x+10,y+26+i*24));else text(vals[k],a==='r'?x+w-10:a==='c'?x+w/2:x+10,y+26,'#111',a==='r'?'right':a==='c'?'center':'left');x+=w});
+      g.strokeStyle='#D5DAD3';g.lineWidth=1;g.beginPath();g.moveTo(X0,y+h);g.lineTo(X0+tw,y+h);g.stroke();y+=h;
+    }
+    if(priced){if(room(46))head();font(700,19);text(sub,X0+tw-152,y+30,'#111','right');text(money(list.reduce((t,m)=>t+(priceOf(m.key)||0)*m.q,0)),X0+tw-10,y+30,'#111','right');y+=46}
+    y+=26;
+  };
+  if(c.mats.length)table(c.incl?'Materiale':'Materiale necesare (procurate de beneficiar)',c.mats,c.incl,'Total materiale');
+  if(c.lab.length){if(!c.incl)cols.splice(0,cols.length,['Nr.',60,'l'],['Denumire',560,'l'],['UM',70,'c'],['Cant.',100,'r'],['Preț unitar',140,'r'],['Valoare',142,'r']);table('Manoperă',c.lab,true,'Total manoperă')}
+  const tr=[];if(c.incl)tr.push(['Materiale',c.tm]);tr.push(['Manoperă',c.tl]);if(c.disc)tr.push([`Discount ${f(+o.disc,1)} %`,-c.disc]);
+  if(fi.tva){tr.push(['Total fără TVA',c.net],[`TVA ${f(+fi.cota||0,0)} %`,c.tva])}
+  room(tr.length*36+90);const bx=W2-M-520;
+  for(const[k,v]of tr){font(500,20);text(k,bx,y+26,'#333');text(money(v)+' lei',W2-M,y+26,'#111','right');y+=36}
+  g.fillStyle='#18222C';g.fillRect(bx,y+6,520,62);font(700,24);text(fi.tva?'TOTAL CU TVA':'TOTAL DE PLATĂ',bx+16,y+46,'#fff');text(money(c.tot)+' lei',W2-M-16,y+46,'#fff','right');y+=96;
+  if(!fi.tva){font(400,17);text('Furnizorul nu este înregistrat în scopuri de TVA.',W2-M,y-14,'#555','right');y+=12}
+  const cond=[`Valabilitatea ofertei: ${+o.valid||30} de zile de la data emiterii.`];
+  if(+o.avans)cond.push(`Plata: avans ${f(+o.avans,0)} % la semnarea contractului, diferența la recepția lucrării.`);
+  if(o.termen)cond.push(`Termen de execuție: ${o.termen}.`.replace(/\.\.$/,'.'));
+  if(o.garantie)cond.push(`Garanție: ${o.garantie}.`.replace(/\.\.$/,'.'));
+  if(fi.iban)cond.push(`Plata se face în contul ${fi.iban}${fi.bank?', '+fi.bank:''}${fi.name?', titular '+fi.name:''}.`);
+  cond.push('Cantitățile sunt estimate pe baza planului. Diferențele constatate la execuție se decontează la prețurile unitare din prezenta ofertă.');
+  if(!c.incl)cond.push('Materialele se procură de beneficiar, conform listei de mai sus.');
+  if(o.note)cond.push(o.note);
+  room(80);font(700,24);text('Condiții',M,y+6);y+=30;font(400,19);
+  for(const l of cond){const ls=wrap(l,W2-2*M-30);if(room(ls.length*27+8)){font(400,19)}text('•',M+4,y+20,'#333');ls.forEach((t,i)=>text(t,M+30,y+20+i*27,'#222'));y+=ls.length*27+8}
+  y+=30;room(190);const cw=(W2-2*M-60)/2;
+  font(600,20);text('Ofertant',M,y+20,'#333');text('Beneficiar — de acord cu oferta',M+cw+60,y+20,'#333');
+  font(400,19);text(fi.person||fi.name,M,y+50,'#111');text(P.client||'',M+cw+60,y+50,'#111');
+  g.strokeStyle='#999';g.lineWidth=1.5;for(const x of[M,M+cw+60]){g.beginPath();g.moveTo(x,y+140);g.lineTo(x+cw,y+140);g.stroke()}
+  font(400,16);text('Semnătura',M,y+164,'#777');text('Semnătura și data',M+cw+60,y+164,'#777');
+  pages.forEach((cv,i)=>{const gg=cv.getContext('2d');gg.font=`400 16px ${SANS}`;gg.fillStyle='#777';gg.textAlign='left';gg.fillText(`${fi.name} · Oferta nr. ${o.nr} din ${dRo(o.date)}`,M,H2-M/2);gg.textAlign='right';gg.fillText(`Pagina ${i+1} / ${pages.length}`,W2-M,H2-M/2)});
+  const doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+  pages.forEach((cv,i)=>{if(i)doc.addPage('a4','portrait');doc.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297)});
+  renderOffer();
+  await saveBlob(doc.output('blob'),`Oferta_${String(o.nr).replace(/[^\w-]+/g,'_')}_${fileBase()}.pdf`,['Oferta a fost salvată.','Oferta a fost descărcată.']);
 }
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
 function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?370:0),AH=Hh-(bot?Hh*.55:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
@@ -2436,7 +2649,7 @@ $('#authBox').addEventListener('submit',async e=>{
 });
 function useStore(key,migrate){
   try{store.current=P.id;localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}
-  KEY=key;let s2=null;try{s2=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  KEY=key;loadCfg();let s2=null;try{s2=JSON.parse(localStorage.getItem(KEY))}catch(e){}
   if(migrate){let base=null;try{base=JSON.parse(localStorage.getItem(KEY0))}catch(e){}const own=base&&Array.isArray(base.projects)?base.projects.filter(x=>!x.sample):[];
     if(own.length){s2=s2&&Array.isArray(s2.projects)?s2:{projects:[],current:null};for(const x of own)if(!s2.projects.some(q=>q.id===x.id))s2.projects.push(x);setTimeout(()=>toast(`Am mutat în contul tău ${own.length} ${own.length===1?'proiect găsit':'proiecte găsite'} pe acest dispozitiv.`),600)}try{localStorage.removeItem(KEY0)}catch(e){}}
   if(!s2||!Array.isArray(s2.projects)||!s2.projects.length){const sm=sample();s2={projects:[sm],current:sm.id}}
