@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ElectroPlan">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="app-version" content="9b81f5461375">
 </head>
 <body>
 <title>ElectroPlan</title>
@@ -227,6 +228,9 @@ dialog::backdrop{background:rgba(10,15,20,.45)}
 dialog h2{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:24px}
 dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--canvas);padding:8px;resize:vertical}
 .dl{display:flex;flex-direction:column;gap:12px}
+.upd{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:8px 8px 8px 16px;border-radius:12px;background:var(--ink);color:var(--canvas);box-shadow:0 8px 28px rgba(0,0,0,.25);font-size:14px}
+.upd .btn{border-color:transparent}
+.upd .x{background:none;border:0;color:inherit;opacity:.7;font-size:18px;padding:4px 8px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--canvas);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20}
 .insp-x{position:sticky;top:0;align-self:flex-end;margin:-8px -8px -40px 0;z-index:1;width:36px;height:36px;justify-content:center}
 .stage.io .selbar{right:360px}
@@ -354,6 +358,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   </main>
 </div>
 
+<div class="upd" id="updBar" role="status" hidden><span>Versiune nouă disponibilă.</span><button class="btn pri" type="button" id="updGo">Actualizează</button><button class="x" type="button" id="updX" aria-label="Mai târziu">×</button></div>
 <dialog id="accDlg">
   <form class="dl" id="accF">
     <div><h2>Cont ElectroPlan</h2><p class="muted" style="margin:0" id="accH">Te conectezi cu adresa de e-mail. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.</p></div>
@@ -2417,6 +2422,16 @@ R=computeLv();renderIso();
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 connectCloud();
+{const mv=document.querySelector('meta[name="app-version"]'),APP_V=mv&&mv.content;
+  if(APP_V&&/^https?:$/.test(location.protocol)){
+    let snooze=0,last=0;
+    const check=async()=>{if(Date.now()-last<60000||Date.now()<snooze)return;last=Date.now();try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();if(j.v&&j.v!==APP_V)$('#updBar').hidden=false}catch(e){}};
+    $('#updGo').onclick=async()=>{const b=$('#updGo');b.disabled=true;b.textContent='Se salvează…';try{clearTimeout(save.t);const pb=pbody(P);if(cloud.last[P.id]!==pb){P.updated=Date.now();cloud.last[P.id]=pb;if(cloud.col)cloud.queue.add(P.id)}persist();if(cloud.col&&cloud.queue.size)await Promise.race([flush(),new Promise(r=>setTimeout(r,4000))])}catch(e){}location.reload()};
+    $('#updX').onclick=()=>{$('#updBar').hidden=true;snooze=Date.now()+3600000};
+    setTimeout(check,8000);setInterval(check,300000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
+    window.addEventListener('online',check);
+  }}
 let authMode='in';
 function setAuthMode(m){authMode=m;const T={in:['Intră în cont','Intră în cont','Creează cont nou','Proiectele tale sunt salvate în cont și le vezi doar tu, pe orice dispozitiv.'],up:['Cont nou','Creează contul','Am deja cont','Alege o parolă de cel puțin 6 caractere. Vei primi un e-mail de confirmare.'],reset:['Parolă nouă','Salvează parola',null,'Scrie parola nouă pentru contul tău.'],forgot:['Resetează parola','Trimite link de resetare','Înapoi la conectare','Îți trimitem pe e-mail un link prin care alegi o parolă nouă.']}[m];
   $('#authT').textContent=T[0];$('#authGo').textContent=T[1];$('#authSw').hidden=!T[2];if(T[2])$('#authSw').textContent=T[2];$('#authH').textContent=T[3];$('#authMsg').textContent='';

@@ -64,3 +64,7 @@ Pe site-ul publicat (Vercel), în Chrome pe tabletă sau telefon: butonul „Ins
 Deschide `index.html` în browser sau activează GitHub Pages pe ramura principală.
 
 > Rezultatele sunt orientative. Proiectul final se verifică și se semnează de un electrician autorizat ANRE.
+
+## Actualizări
+
+La fiecare publicare, `build.sh` scrie versiunea în `version.json` și în `index.html`. Aplicația deschisă verifică la 5 minute și la revenirea în ea dacă există o versiune nouă. Când există, afișează „Versiune nouă disponibilă”, iar „Actualizează” salvează proiectul și reîncarcă aplicația.
