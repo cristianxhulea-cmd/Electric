@@ -309,6 +309,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
       <button role="tab" data-tab="materiale" aria-selected="false" type="button">Materiale</button>
       <button role="tab" data-tab="oferta" aria-selected="false" type="button">Ofertă</button>
       <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
+      <button role="tab" data-tab="admin" aria-selected="false" type="button" id="tabAdmin" hidden>Admin</button>
     </nav>
     <div class="acts">
       <button class="btn" id="accBtn" type="button" hidden>Conectează-te</button>
@@ -346,6 +347,7 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
     <section class="view doc" id="v-materiale" hidden></section>
     <section class="view doc" id="v-oferta" hidden></section>
     <section class="view doc" id="v-lucrari" hidden></section>
+    <section class="view doc" id="v-admin" hidden></section>
   </main>
 </div>
 
@@ -729,17 +731,19 @@ async function claimSession(){if(!sb||!sbUser||!sbSid)return true;const{error}=a
 async function checkSession(){
   if(!sb||!sbUser||!sbSid)return true;
   const{data,error}=await sb.from('active_sessions').select('session_id,device').eq('user_id',sbUser.id).maybeSingle();
-  if(error){if(error.status===401||/jwt|session/i.test(error.message||'')){kick('');return false}return true}if(!data)return claimSession();
+  if(error){if(error.status===401||/jwt|session/i.test(error.message||'')){kick('','Ai fost deconectat. Intră din nou în cont.');return false}return true}if(!data){kick('','Sesiunea ta a fost închisă. Intră din nou în cont.');return false}
   if(data.session_id!==sbSid){kick(data.device);return false}return true;
 }
-async function kick(dev){
-  if(kicking)return;kicking=true;kickMsg=`Contul tău a fost deschis pe alt dispozitiv${dev?' ('+dev+')':''}, așa că te-am deconectat aici. Intră din nou ca să lucrezi pe acest dispozitiv.`;
+async function kick(dev,msg){
+  if(kicking)return;kicking=true;kickMsg=msg||`Contul tău a fost deschis pe alt dispozitiv${dev?' ('+dev+')':''}, așa că te-am deconectat aici. Intră din nou ca să lucrezi pe acest dispozitiv.`;
   cloud.col=null;cloud.queue.clear();try{await sb.auth.signOut({scope:'local'})}catch(e){}kicking=false;
 }
 async function startUser(ev){
-  useStore(KEY0+':'+sbUser.id,true);setSync('conn');
+  setSync('conn');
   const fresh=claimNext||urlLogin;claimNext=false;urlLogin=false;
   if(!(fresh?await claimSession():await checkSession()))return;
+  if(!(await checkLicense()))return;
+  useStore(KEY0+':'+sbUser.id,true);try{sb.rpc('touch_profile').then(()=>{},()=>{})}catch(e){}
   cloud.col=sbCol;cloud.seen=false;sbPull();if(!$('#intro').hidden)showIntro();
   if(ev==='SIGNED_IN')toast('Bine ai venit, '+(sbUser.email||'')+'.');
 }
@@ -766,15 +770,15 @@ async function sbConnect(){
     if(ev==='PASSWORD_RECOVERY'){sbUser=session&&session.user||null;renderAccount();setAuthMode('reset');$('#authBox').hidden=false;$('#introActs').hidden=true;$('#intro').hidden=false;return}
     const u=session&&session.user;if(u&&sbUser&&u.id===sbUser.id){sbUser=u;return}sbUser=u||null;renderAccount();
     if(sbUser)setTimeout(()=>startUser(ev),0);
-    else{sbSid=null;cloud.col=null;cloud.queue.clear();setSync('local');useStore(KEY0+':anon',false);authMode='in';showIntro();if(kickMsg){$('#authMsg').textContent=kickMsg;toast(kickMsg);kickMsg=''}}
+    else{sbSid=null;cloud.col=null;cloud.queue.clear();acct=null;renderAdminTab();setSync('local');useStore(KEY0+':anon',false);if(wipeKeys){try{wipeKeys.forEach(k=>localStorage.removeItem(k))}catch(e){}wipeKeys=null}authMode='in';showIntro();if(kickMsg){$('#authMsg').textContent=kickMsg;toast(kickMsg);kickMsg=''}}
   });
   const{data}=await sb.auth.getSession();if(!data.session){setSync('local');showIntro()}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!sbUser)return;if(Date.now()-sbPullT>15000){sbPullT=Date.now();sbPull()}else checkSession()});
   window.addEventListener('online',()=>{if(sbUser){flush();sbPull()}});
   setInterval(()=>{if(sbUser&&document.visibilityState==='visible'&&!cloud.busy)sbPull()},120000);
-  setInterval(()=>{if(sbUser&&cloud.col&&document.visibilityState==='visible')checkSession()},20000);
+  setInterval(async()=>{if(sbUser&&cloud.col&&document.visibilityState==='visible'){if(await checkSession()&&++licTick%3===0)checkLicense()}},20000);
 }
-$('#accBtn').onclick=()=>{if(!sbUser){setAuthMode('in');showIntro();return}const on=true;$('#accH').textContent=on?`Conectat ca ${sbUser.email}. Proiectele se salvează online automat.`:'Te conectezi cu adresa de e-mail: primești un link, îl deschizi pe acest dispozitiv și gata. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.';$('#accEL').hidden=on;$('#accGo').hidden=on;$('#accOut').hidden=!on;$('#accSync').hidden=!on;$('#accDlg').showModal()};
+$('#accBtn').onclick=()=>{if(!sbUser){setAuthMode('in');showIntro();return}const on=true;$('#accH').textContent=on?`Conectat ca ${sbUser.email}. ${acct?(acct.role==='admin'?'Cont de administrator. ':acct.status==='trial'?`Perioadă de probă: mai ai ${daysLeft(acct)} ${daysLeft(acct)===1?'zi':'zile'}, până la ${dRo(isoD(new Date(acct.valid_until)))}. `:`Abonament activ până la ${dRo(isoD(new Date(acct.valid_until)))}. `):''}Proiectele se salvează online automat.`:'Te conectezi cu adresa de e-mail: primești un link, îl deschizi pe acest dispozitiv și gata. Proiectele se salvează online și apar pe orice dispozitiv pe care te conectezi.';$('#accEL').hidden=on;$('#accGo').hidden=on;$('#accOut').hidden=!on;$('#accSync').hidden=!on;$('#accDlg').showModal()};
 $('#accC').onclick=()=>$('#accDlg').close();
 $('#accSync').onclick=async()=>{await sbPull();flush();toast('Sincronizat.')};
 $('#accOut').onclick=async()=>{$('#accDlg').close();await sb.auth.signOut();toast('Te-ai deconectat.')};
@@ -2226,10 +2230,10 @@ vW.addEventListener('click',e=>{
 
 function showTab(t){if(meas&&t!=='plan')endMeas(false);
   tab=t;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
-  ['plan','calcul','materiale','oferta','lucrari'].forEach(k=>{$('#v-'+k).hidden=k!==t});
+  ['plan','calcul','materiale','oferta','lucrari','admin'].forEach(k=>{$('#v-'+k).hidden=k!==t});
   if(t==='plan')requestAnimationFrame(resize);else renderTab();
 }
-function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='oferta')renderOffer();else if(tab==='lucrari')renderWork()}
+function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='oferta')renderOffer();else if(tab==='lucrari')renderWork();else if(tab==='admin'){renderAdmin();loadAdmin()}}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});
 
 function changed(full){R=computeLv();renderIso();renderLevels();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
@@ -2608,6 +2612,68 @@ function drawMeas(){
     const cp=sh({x:cx,y:cy},-24);halo('colț',cp.X,cp.Y,'700 13px "IBM Plex Sans",system-ui,sans-serif',C.accent,'center',C.canvas)}
   if(s.k==='H'){const grp=P.rooms.filter(z=>z.id===meas.rid||z.of===meas.rid);ctx.globalAlpha=.9;ctx.strokeStyle=C2;ctx.lineWidth=3;ctx.setLineDash([8,6]);for(const g of grp)ctx.strokeRect(sx(g.x),sy(g.y),g.w*view.s,g.h*view.s);ctx.setLineDash([])}
   ctx.restore()}
+let acct=null,wipeKeys=null,licTick=0;
+const acctOk=d=>!d||d.role==='admin'||(d.status!=='suspended'&&new Date(d.valid_until)>new Date());
+const daysLeft=d=>Math.ceil((new Date(d.valid_until)-Date.now())/864e5);
+function renderAdminTab(){const b=$('#tabAdmin');if(b)b.hidden=!(acct&&acct.role==='admin');if(tab==='admin'&&!(acct&&acct.role==='admin'))showTab('plan')}
+async function checkLicense(){
+  if(!sb||!sbUser)return true;
+  const{data,error}=await sb.from('profiles').select('role,status,valid_until').eq('user_id',sbUser.id).maybeSingle();
+  if(error){if(error.status===401||/jwt/i.test(error.message||'')){kick('','Ai fost deconectat. Intră din nou în cont.');return false}return true}
+  acct=data||null;renderAdminTab();
+  if(!acctOk(data)){blockAcct(data);return false}
+  return true}
+function blockAcct(d){
+  const sus=d.status==='suspended';
+  kickMsg=sus?'Contul tău a fost suspendat. Pentru detalii, contactează administratorul ElectroPlan.':`${d.status==='trial'?'Perioada de probă':'Abonamentul'} s-a încheiat pe ${dRo(isoD(new Date(d.valid_until)))}. Contactează-ne ca să continui.`;
+  if(sus)wipeKeys=[KEY0+':'+sbUser.id,KEY0+':'+sbUser.id+':cfg'];
+  cloud.col=null;cloud.queue.clear();acct=null;renderAdminTab();sb.auth.signOut({scope:'local'}).catch(()=>{});
+}
+const adm={users:[],log:[],q:'',busy:false,err:''};
+function admBadge(u){const exp=new Date(u.valid_until)<=new Date();
+  const [t,c]=u.role==='admin'?['Admin','var(--accent)']:u.status==='suspended'?['Suspendat','var(--bad)']:exp?['Expirat','var(--muted)']:u.status==='trial'?[`Probă · ${daysLeft(u)} ${daysLeft(u)===1?'zi':'zile'}`,'var(--warn)']:['Activ','var(--ok)'];
+  return`<span class="pill" style="color:${c};border:1px solid currentColor;white-space:nowrap">${t}</span>`}
+const relT=t=>{if(!t)return'—';const d=(Date.now()-new Date(t))/1000;if(d<120)return'acum';if(d<3600)return Math.round(d/60)+' min';if(d<86400)return Math.round(d/3600)+' h';if(d<86400*30)return Math.round(d/86400)+' zile';return dRo(isoD(new Date(t)))};
+const ACT={'status:suspended':'a suspendat','status:active':'a activat','status:trial':'a trecut pe probă',extend:'a prelungit',kick:'a deconectat',delete:'a șters'};
+function renderAdmin(){
+  const el=$('#v-admin');if(!(acct&&acct.role==='admin')){el.innerHTML='';return}
+  const q=adm.q.trim().toLowerCase(),U=adm.users.filter(u=>!q||u.email.toLowerCase().includes(q)),now=new Date();
+  const n=k=>adm.users.filter(k).length;
+  const rows=U.map(u=>{const me=u.user_id===sbUser.id,sus=u.status==='suspended',exp=new Date(u.valid_until)<=now;
+    return`<tr data-uid="${u.user_id}"><td><b style="overflow-wrap:anywhere">${esc(u.email)}</b>${me?' <span class="muted">(tu)</span>':''}<div class="muted" style="font-size:12px">din ${dRo(isoD(new Date(u.created_at)))}</div></td>
+      <td>${admBadge(u)}</td><td class="n">${u.role==='admin'?'—':dRo(isoD(new Date(u.valid_until)))}</td><td>${relT(u.last_seen||u.last_sign_in)}</td><td>${esc(u.device||'—')}</td><td class="n">${u.projects??0}</td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${me?'':sus?'<button class="btn" type="button" data-adm="activate">Activează</button>':'<button class="btn dng" type="button" data-adm="suspend">Suspendă</button>'}
+      ${u.role==='admin'?'':'<button class="btn" type="button" data-adm="d30">+30 zile</button><button class="btn" type="button" data-adm="d365">+1 an</button>'}
+      ${me||!u.device?'':'<button class="btn" type="button" data-adm="kick">Deconectează</button>'}${me?'':'<button class="btn dng" type="button" data-adm="del" aria-label="Șterge contul">Șterge</button>'}${!sus&&!exp&&u.status==='trial'&&u.role!=='admin'?'<button class="btn" type="button" data-adm="activate">Marchează plătit</button>':''}</div></td></tr>`}).join('');
+  el.innerHTML=`<div class="wrap">
+    <h1>Admin</h1>
+    <p class="lede">Conturile utilizatorilor. Suspendarea îi deconectează imediat și baza de date le refuză proiectele. Doar tu vezi această pagină.</p>
+    ${adm.err?`<div class="warns"><li style="list-style:none">${esc(adm.err)}</li></div>`:''}
+    <div class="stats"><div class="stat"><span>Utilizatori</span><b>${adm.users.length}</b></div><div class="stat"><span>În probă</span><b>${n(u=>u.status==='trial'&&new Date(u.valid_until)>now)}</b></div><div class="stat"><span>Activi</span><b>${n(u=>u.status==='active'&&new Date(u.valid_until)>now)}</b></div><div class="stat"><span>Expirați</span><b>${n(u=>u.status!=='suspended'&&u.role!=='admin'&&new Date(u.valid_until)<=now)}</b></div><div class="stat"><span>Suspendați</span><b>${n(u=>u.status==='suspended')}</b></div></div>
+    <div class="bar"><input id="admQ" type="search" placeholder="Caută după e-mail" value="${esc(adm.q)}" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--canvas);color:var(--ink)"><button class="btn" type="button" data-adm="reload">${adm.busy?'Se încarcă…':'Reîncarcă'}</button></div>
+    <div class="tbl"><table><thead><tr><th>Cont</th><th>Stare</th><th class="n">Valabil până la</th><th>Activ ultima dată</th><th>Dispozitiv</th><th class="n">Proiecte</th><th>Acțiuni</th></tr></thead><tbody>${rows||'<tr><td colspan="7" class="muted">Niciun cont găsit.</td></tr>'}</tbody></table></div>
+    <h2>Jurnal</h2>
+    <div class="tbl"><table><tbody>${adm.log.map(l=>`<tr><td class="mono" style="white-space:nowrap">${new Date(l.at).toLocaleString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${ACT[l.action]||esc(l.action)} <b>${esc(l.target_email)}</b>${l.detail&&l.detail.add_days?` cu ${l.detail.add_days} zile`:''}</td></tr>`).join('')||'<tr><td class="muted">Nicio acțiune încă.</td></tr>'}</tbody></table></div>
+  </div>`;
+}
+async function loadAdmin(){
+  if(!(acct&&acct.role==='admin')||adm.busy)return;adm.busy=true;adm.err='';renderAdmin();
+  const[a,b]=await Promise.all([sb.rpc('admin_list_users'),sb.from('admin_log').select('at,target_email,action,detail').order('at',{ascending:false}).limit(40)]);
+  adm.busy=false;if(a.error){adm.err='Nu am putut încărca lista de conturi. Verifică dacă scriptul 0003 a fost rulat în Supabase.'}else adm.users=a.data||[];
+  adm.log=b.error?[]:(b.data||[]);if(tab==='admin')renderAdmin();
+}
+$('#v-admin').addEventListener('input',e=>{if(e.target.id==='admQ'){adm.q=e.target.value;const p=e.target.selectionStart;renderAdmin();const i=$('#admQ');i.focus();i.setSelectionRange(p,p)}});
+$('#v-admin').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-adm]');if(!b)return;const k=b.dataset.adm;if(k==='reload'){loadAdmin();return}
+  const u=adm.users.find(x=>x.user_id===(b.closest('[data-uid]')||{}).dataset?.uid);if(!u)return;let r;
+  if(k==='suspend'){if(!confirm(`Suspenzi contul ${u.email}?\n\nVa fi deconectat imediat de pe toate dispozitivele și nu va mai putea intra până îl reactivezi.`))return;r=await sb.rpc('admin_update_user',{target:u.user_id,new_status:'suspended'})}
+  else if(k==='activate'){r=await sb.rpc('admin_update_user',{target:u.user_id,new_status:'active',add_days:new Date(u.valid_until)<=new Date()?30:null})}
+  else if(k==='d30'||k==='d365'){r=await sb.rpc('admin_update_user',{target:u.user_id,add_days:k==='d30'?30:365})}
+  else if(k==='kick'){if(!confirm(`Deconectezi ${u.email} de pe ${u.device||'dispozitivul activ'}? Poate intra din nou cu parola.`))return;r=await sb.rpc('admin_update_user',{target:u.user_id,kick:true})}
+  else if(k==='del'){const t=prompt(`Ștergerea contului e definitivă: se șterg și toate proiectele lui.\n\nScrie adresa ${u.email} ca să confirmi:`);if(t==null)return;if(t.trim().toLowerCase()!==u.email.toLowerCase()){toast('Adresa nu se potrivește. Contul nu a fost șters.');return}r=await sb.rpc('admin_delete_user',{target:u.user_id})}
+  if(r&&r.error){toast('Acțiunea nu a reușit: '+(r.error.message||'eroare'));return}
+  toast({suspend:'Cont suspendat.',activate:'Cont activat.',d30:'Prelungit cu 30 de zile.',d365:'Prelungit cu un an.',kick:'Dispozitiv deconectat.',del:'Cont șters.'}[k]);loadAdmin();
+});
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
 function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?370:0),AH=Hh-(bot?Hh*.55:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
 function enterRoom(id){if(!P.rooms.some(z=>z.id===id))return;focusId=id;sel=null;isoId='';renderIso();setInsp(true);fitRects(groupOf(id),60);renderSelbar();draw()}

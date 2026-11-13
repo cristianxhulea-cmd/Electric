@@ -78,3 +78,9 @@ Fila Ofertă adună materialele și manopera din plan cu prețurile din catalog 
 ## Mod măsurare
 
 Selectezi o cameră și apeși „Măsoară”. Aplicația evidențiază pe rând peretele de sus, cel din dreapta, apoi pe cei opuși, pentru verificare, înălțimea camerei și ușile și ferestrele camerei. Scrii valoarea în centimetri (362,5) sau în metri (3,625), apeși Enter sau Tab, iar planul se ajustează și trece la pasul următor; un telemetru cu „keyboard mode” poate scrie direct în câmp. Dacă peretele opus diferă cu peste 2 cm, poți alege media, păstra valoarea sau remăsura. La uși și ferestre măsori distanța de la colțul marcat și lățimea golului. Cotele măsurate apar cu verde. „+ Cameră alăturată” adaugă camera vecină și pornește direct măsurarea ei.
+
+## Conturi, abonamente și Admin
+
+Fiecare cont are o stare: probă (14 zile la înregistrare), activ sau suspendat, plus o dată de valabilitate (`supabase/migrations/0003_accounts_admin.sql`). Baza de date refuză proiectele conturilor suspendate sau expirate; aplicația verifică starea la pornire și la fiecare minut, deconectează contul și afișează motivul. La suspendare, datele locale ale contului sunt șterse de pe dispozitiv la următoarea verificare.
+
+Fila Admin apare doar pentru rolul `admin` și permite: suspendare, activare, prelungire cu 30 de zile sau un an, deconectarea dispozitivului activ și ștergerea contului cu toate proiectele. Acțiunile se trec în jurnal. Rolul de admin se setează doar din baza de date: `update public.profiles set role='admin', status='active', valid_until='2100-01-01' where lower(email)=lower('adresa@ta');`
