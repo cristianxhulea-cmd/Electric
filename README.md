@@ -88,3 +88,7 @@ Fila Admin apare doar pentru rolul `admin` și permite: suspendare, activare, pr
 ## Ergonomie
 
 Bara de unelte arată „Selectează”, ultimele 4 unelte folosite și grupurile (Plan, Structură, Doze, Prize, Iluminat, Consumatori, Alimentare); se deschide câte un grup, iar alegerea rămâne memorată. Bara de jos păstrează zoom, centrare, nivel și trasee; restul (rotire, scară, straturi, ecran mare) e în „Afișare”. Pe ecranul de start, fiecare proiect are meniul ⋯ cu Redenumește, Duplică și Șterge, iar ștergerea se poate anula câteva secunde. Fila Documente adună proiectul tehnic PDF și oferta. Butonul „?” deschide ghidul în 4 pași, afișat automat la proiectele noi până îl oprești.
+
+## Interfața nouă
+
+Bara de sus arată proiectul (nume, adresă; atins deschide lista de proiecte), starea salvării, filele cu iconițe și contul. În stânga, o coloană cu categorii mari (Desen, Pereți, Prize, Lumini, Comenzi, Aparate, Doze, Tablou) deschide o paletă cu plăcuțe. Planul stă pe o foaie, cu indicatori de stare deasupra (circuite conforme I7, atenționări, putere, disjunctor, tablou, setări proiect). Bara de acțiuni apare lângă elementul selectat, iar jos rămâne o singură bară cu zoom, scară, nivel, trasee și straturi. Panoul unei camere are Rezumat (cifre, verificări I7 cu „Arată”, circuitele din cameră, Măsoară) și Detalii.

@@ -129,7 +129,7 @@ main{min-height:0;position:relative}
 .hudMore{position:absolute;right:0;bottom:calc(100% + 8px);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;max-width:min(560px,calc(100vw - 40px));padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
 .hudMore .layers{margin-left:0}
 .layers{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
-.stage.meas .hud,.stage.meas .selbar{display:none}
+.stage.meas .hud,.stage.meas .selbar,.stage.meas .statc{display:none}
 .measBar{position:absolute;left:10px;right:10px;bottom:10px;z-index:7;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px 14px}
 .measBar form{display:flex;flex-direction:column;gap:8px}
 .measIn{width:150px;font:600 26px var(--f-mono);padding:6px 10px;border:2px solid var(--sel);border-radius:8px;background:var(--canvas);color:var(--ink)}
@@ -253,6 +253,115 @@ dialog textarea{width:100%;min-height:150px;font-family:var(--f-mono);font-size:
 body.focus .top{display:none}
 body.focus #app{grid-template-rows:minmax(0,1fr)}
 body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+:root{--r-lg:16px;--r-md:11px;--shadow:0 6px 22px rgba(15,25,35,.08);--brand:#D9894A}
+.top{min-height:62px;padding-block:8px;gap:10px 16px}
+.brand{font-size:21px}
+.proj{gap:8px}
+#projSel{display:none}
+.projBtn{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;padding:6px 12px;border-radius:var(--r-md);border:0;background:var(--bg);color:var(--ink);text-align:left;max-width:280px;min-width:0}
+.projBtn b{font-size:15px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.projBtn span{font-size:12px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.projBtn:hover{background:var(--accent-soft)}
+#newProj{border-radius:var(--r-md);min-height:40px;width:40px;justify-content:center;padding:0}
+#newProj .lbl{display:none}
+.sync{padding:4px 10px;border-radius:999px;background:var(--bg)}
+.sync[data-s="ok"]{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.sync[data-s="bad"]{background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.tabs{margin-inline:auto;padding:4px;border-radius:13px;gap:3px}
+.tabs button{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;font-weight:600}
+.tabs button svg{width:17px;height:17px;flex:none}
+.acts{margin-left:0;gap:8px}
+.acts .btn.ic{width:40px;height:40px;justify-content:center;border-radius:var(--r-md)}
+#ioBtn{height:40px;border-radius:var(--r-md)}
+#ioBtn .lbl{display:none}
+#accBtn.av{width:40px;height:40px;padding:0;justify-content:center;border-radius:50%;background:var(--ink);color:var(--canvas);border-color:var(--ink);font-weight:700;font-size:13px}
+.btn{border-radius:9px}
+.plan{grid-template-columns:92px minmax(0,1fr);background:var(--bg)}
+.tools{margin:12px 0 12px 12px;padding:8px 6px;gap:3px;border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow-y:auto}
+.rail-b{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:58px;padding:8px 2px;border:0;border-radius:12px;background:none;color:var(--muted);font-size:10.5px;font-weight:600;line-height:1.15;text-align:center}
+.rail-b svg{width:26px;height:26px;flex:none}
+.rail-b span{max-width:100%;overflow-wrap:anywhere}
+.rail-b:hover{background:var(--bg);color:var(--ink)}
+.rail-b.on{background:var(--accent);color:var(--accent-ink)}
+.rail-b.open:not(.on){background:var(--accent-soft);color:var(--accent)}
+.rail-sep{width:40px;border:0;border-top:1px solid var(--line);margin:4px auto}
+.fly{position:absolute;left:104px;top:12px;z-index:8;width:256px;max-height:calc(100% - 24px);overflow-y:auto;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 14px 36px rgba(15,25,35,.16)}
+.fly-h{display:flex;align-items:center;justify-content:space-between}
+.fly-h b{font-family:var(--f-display);font-size:21px}
+.fly-h .btn{width:34px;height:34px;justify-content:center}
+.fly p{margin:4px 0 12px;font-size:12.5px;color:var(--muted)}
+.fly-t{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ftile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border:1px solid var(--line);border-radius:12px;background:var(--canvas);color:var(--ink);font-size:12px;font-weight:600;text-align:center}
+.ftile svg{width:32px;height:32px}
+.ftile:hover{border-color:var(--accent)}
+.ftile.on{border:2px solid var(--accent);background:var(--accent-soft)}
+.stage{margin:12px;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.statc{position:absolute;left:12px;top:12px;right:12px;z-index:4;display:flex;flex-wrap:wrap;gap:8px;pointer-events:none}
+.statc>*{pointer-events:auto}
+.schip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);color:var(--ink);font-size:12.5px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.05);backdrop-filter:blur(4px)}
+.schip i{width:8px;height:8px;border-radius:50%;flex:none}
+.schip svg{width:15px;height:15px}
+.schip.ok{color:var(--ok)}.schip.w{color:var(--warn)}
+.stage.io .statc{right:calc(var(--inspW,340px) + 24px)}
+.selbar{left:12px;right:auto;top:60px;max-width:calc(100% - 24px);padding:5px;gap:4px;background:var(--ink);color:var(--canvas);border-radius:13px;box-shadow:0 10px 26px rgba(0,0,0,.25);pointer-events:auto}
+.selbar:empty{display:none}
+.selbar.anch .tag .muted{display:none}
+.selbar.anch{flex-wrap:wrap;max-width:min(560px,calc(100% - 24px))}
+.selbar.anch .tag{flex:none;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.selbar .tag{background:transparent;border:0;color:inherit;padding:6px 8px}
+.selbar .tag .muted{color:inherit;opacity:.7}
+.selbar .btn{background:transparent;border-color:transparent;color:inherit;font-weight:600;font-size:13px}
+.selbar .btn:hover{background:color-mix(in srgb,var(--canvas) 14%,transparent)}
+.selbar .btn.pri,.selbar .btn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#1A120B}
+.selbar .btn.dng{color:#F4A3A3}
+.stage.io .selbar{right:auto}
+.hud{left:50%;right:auto;bottom:14px;transform:translateX(-50%);max-width:calc(100% - 24px);flex-wrap:nowrap;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(15,25,35,.12);pointer-events:auto}
+.stage.io .hud{left:calc(50% - var(--inspW,340px)/2 - 12px)}
+.hud .btn{border-color:transparent;min-height:36px}
+.hud .btn.ic{min-width:36px;justify-content:center;font-size:17px}
+.hud .btn:hover{background:var(--bg)}
+.zpct{font:600 12.5px var(--f-mono);color:var(--ink);min-width:48px;text-align:center}
+.hud .chipsel{border-radius:9px;padding:7px 8px;font-size:13px;font-weight:600}
+.lq{margin-left:0;gap:4px;flex-wrap:nowrap;padding-left:6px;border-left:1px solid var(--line)}
+.lq .chip,.hudMore .chip{border-radius:9px;padding:7px 11px;font-weight:600;font-size:12.5px}
+#hudMoreBtn{border-left:1px solid var(--line)!important;border-radius:0 9px 9px 0}
+#zFit .lbl{display:none}
+.hudMore{right:0;bottom:calc(100% + 10px)}
+.inspector{top:12px;right:12px;bottom:12px;border-radius:var(--r-lg);box-shadow:0 14px 36px rgba(15,25,35,.14)}
+.itabs{display:flex;gap:18px;margin:-6px 0 -4px;border-bottom:1px solid var(--line)}
+.itabs button{border:0;background:none;padding:8px 0 10px;font-weight:600;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.itabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.rsum{display:flex;flex-direction:column;gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpis>div{background:var(--bg);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column}
+.kpis b{font:600 19px var(--f-mono)}.kpis span{font-size:11.5px;color:var(--muted)}
+.rchk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rchk li{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:var(--bg);font-size:13px}
+.rchk li span{flex:1}
+.rchk li i{font-style:normal;font-weight:800;width:16px;text-align:center}
+.rchk li i.ok{color:var(--ok)}
+.rchk li.w{background:var(--warn-bg);color:var(--warn)}
+.rchk li .btn{padding:3px 9px;font-size:12px}
+.rcirc>div{display:grid;grid-template-columns:10px 36px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.rcirc>div:last-child{border-bottom:0}
+.rcirc small{color:var(--muted)}
+.wrap{gap:22px}
+.wrap h1{font-size:34px}
+.card{border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.tbl{border-radius:14px;box-shadow:var(--shadow)}
+.stats{border-radius:14px;box-shadow:var(--shadow)}
+.col{border-radius:var(--r-lg)}
+.rail-box{border-radius:var(--r-lg)}
+@media (max-width:1366px){
+  .brand .bt{display:none}
+  .tabs button{padding:8px 11px}
+}
+@media (max-width:1180px){
+  .tabs button{padding:8px 10px}
+  .tabs button span{display:none}
+  .tabs button[aria-selected="true"] span{display:inline}
+  .projBtn{max-width:200px}
+}
 @media (max-width:1440px){
   .sync-t{display:none}
   #ioBtn .lbl{display:none}
@@ -287,6 +396,47 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   .kb{grid-template-columns:minmax(0,1fr)}
   .acts{margin-left:0}
   .brand{font-size:20px}
+}
+@media (max-width:760px),(orientation:portrait) and (max-width:1100px){
+  .inspector{top:auto;left:12px;right:12px;bottom:12px}
+  .stage.io .statc{right:12px}
+  .stage.io .hud{left:50%}
+}
+@media (max-width:640px){
+  .top{padding-block:6px;gap:6px 8px}
+  .brand .bt{display:none}
+  .projBtn{max-width:none;flex:1;padding:5px 10px}
+  .proj{flex:1;min-width:0}
+  .sync{display:none}
+  .tabs button span{display:inline}
+  .tabs button svg{display:none}
+  .plan{grid-template-columns:minmax(0,1fr)}
+  .tools{flex-direction:row;margin:8px 8px 0;padding:4px 6px;overflow-x:auto;overflow-y:hidden;gap:2px}
+  .rail-b{min-width:62px;min-height:52px;padding:6px 4px}
+  .rail-b svg{width:22px;height:22px}
+  .rail-sep{width:0;height:36px;border-top:0;border-left:1px solid var(--line);margin:auto 4px}
+  .fly{left:8px;right:8px;top:74px;width:auto}
+  .fly-t{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stage{margin:8px}
+  .statc{left:8px;right:8px;top:8px}
+  .schip.kw{display:none}
+  .schip.pj span{display:none}
+  .hud{bottom:8px;max-width:calc(100% - 16px);flex-wrap:wrap;justify-content:center}
+  .acts{gap:5px}
+  .acts .btn.ic{width:36px;height:36px}
+  #redoBtn,#ioBtn{display:none}
+  #newProj{width:36px;min-height:36px}
+  .rail-b span{white-space:nowrap;font-size:10px}
+  .rail-b{min-width:64px}
+  #zOut,#zIn{display:none}
+  .hud{flex-wrap:nowrap}
+  #lvSel{max-width:96px}
+  #isoSel{max-width:118px}
+  .stage.io .selbar.anch{display:none}
+  .lq{display:none}
+  .zpct{display:none}
+  #hudMoreBtn .lbl{display:none}
+  .hud .chipsel{max-width:120px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -332,20 +482,21 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   <header class="top">
     <div class="brand" id="brandBtn" role="button" tabindex="0" title="Ecranul de pornire" style="cursor:pointer"><span class="wires" aria-hidden="true"><i></i><i></i><i></i></span><span class="bt">ElectroPlan</span></div>
     <div class="proj">
+      <button class="projBtn" id="projBtn" type="button" title="Proiectele tale"><b id="projName"></b><span id="projSub"></span></button>
       <select id="projSel" aria-label="Proiect"></select>
       <button class="btn" id="newProj" type="button" title="Proiect nou"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Proiect nou</span></button>
+      <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
     </div>
     <nav class="tabs" role="tablist" aria-label="Secțiuni">
-      <button role="tab" data-tab="plan" aria-selected="true" type="button">Plan</button>
-      <button role="tab" data-tab="calcul" aria-selected="false" type="button">Circuite</button>
-      <button role="tab" data-tab="materiale" aria-selected="false" type="button">Materiale</button>
-      <button role="tab" data-tab="oferta" aria-selected="false" type="button">Documente</button>
-      <button role="tab" data-tab="lucrari" aria-selected="false" type="button">Lucrări</button>
-      <button role="tab" data-tab="admin" aria-selected="false" type="button" id="tabAdmin" hidden>Admin</button>
+      <button role="tab" data-tab="plan" aria-selected="true" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h9V3M12 12v9"/></svg><span>Plan</span></button>
+      <button role="tab" data-tab="calcul" aria-selected="false" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Circuite</span></button>
+      <button role="tab" data-tab="materiale" aria-selected="false" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>Materiale</span></button>
+      <button role="tab" data-tab="oferta" aria-selected="false" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg><span>Documente</span></button>
+      <button role="tab" data-tab="lucrari" aria-selected="false" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7H4V5h11"/></svg><span>Lucrări</span></button>
+      <button role="tab" data-tab="admin" aria-selected="false" type="button" id="tabAdmin" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg><span>Admin</span></button>
     </nav>
     <div class="acts">
       <button class="btn" id="accBtn" type="button" hidden>Conectează-te</button>
-      <span class="sync" id="sync" data-s="muted" role="status"><span class="sync-t">Doar pe acest dispozitiv</span></span>
       <button class="btn pri" id="installBtn" type="button" hidden>Instalează aplicația</button>
       <button class="btn ic" id="helpBtn" type="button" title="Cum lucrezi cu ElectroPlan" aria-label="Ajutor" style="font-weight:700;min-width:34px;justify-content:center">?</button>
       <button class="btn ic" id="undoBtn" type="button" title="Anulează (Ctrl+Z)" aria-label="Anulează"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
@@ -356,18 +507,22 @@ body.focus #focusBtn{background:var(--accent);border-color:var(--accent);color:v
   <main>
     <section class="view plan" id="v-plan">
       <div class="tools" id="tools"></div>
+      <div class="fly" id="fly" hidden></div>
       <div class="stage" id="stage">
         <canvas id="cv"></canvas>
+        <div class="statc" id="statc"></div>
         <div class="selbar" id="selbar"></div>
         <div class="measBar" id="measBar" hidden></div>
         <input class="nameEd" id="nameEd" hidden aria-label="Numele camerei" autocomplete="off">
         <div class="hud">
           <button class="btn ic" id="zOut" type="button" aria-label="Micșorează">−</button>
+          <span class="zpct" id="zPct" title="Scara aproximativă pe ecran">1:50</span>
           <button class="btn ic" id="zIn" type="button" aria-label="Mărește">+</button>
           <button class="btn" id="zFit" type="button" title="Centrează pe elementul selectat sau pe tot planul (dublă atingere pe plan)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span class="lbl" id="zFitL">Centrează</span></button>
           <select id="lvSel" class="chipsel on" aria-label="Nivel"></select>
           <select id="isoSel" class="chipsel" aria-label="Arată traseul"></select>
-          <button class="btn" id="hudMoreBtn" type="button" aria-expanded="false" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Afișare</span></button>
+          <div class="layers lq" id="layersQ"></div>
+          <button class="btn" id="hudMoreBtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Afișare</span></button>
           <div class="hudMore" id="hudMore" hidden>
           <button class="btn ic" id="rot90" type="button" title="Rotește planul cu 90°" aria-label="Rotește planul cu 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
           <button class="btn" id="rotReset" type="button" hidden>Îndreaptă</button>
@@ -809,7 +964,7 @@ async function sbPull(){
   if(del.size){store.projects=store.projects.filter(p=>!del.has(p.id)||(p.updated||0)>del.get(p.id));if(!store.projects.length)store.projects.push(norm(blank('Proiect 1')))}
   onRemote({docs:data.filter(r=>!r.deleted).map(r=>({id:r.id,data:()=>({p:r.data,updated:+r.updated})})),docChanges:()=>[]});
 }
-function renderAccount(){const b=$('#accBtn');if(!b)return;b.hidden=!sb;b.textContent=sbUser?'Cont':'Conectează-te';b.title=sbUser?sbUser.email||'':'Salvează proiectele online'}
+function renderAccount(){const b=$('#accBtn');if(!b)return;b.hidden=!sb;b.classList.toggle('av',!!sbUser);b.textContent=sbUser?((sbUser.email||'?').split('@')[0].replace(/[^a-zA-Z]/g,'').slice(0,2).toUpperCase()||'?'):'Conectează-te';b.title=sbUser?sbUser.email||'':'Salvează proiectele online'}
 async function sbConnect(){
   if(!SB_KEY||!/^https?:$/.test(location.protocol)){setSync('local');return}
   try{await loadSB()}catch(e){siteMode=false;setSync('local');if(!$('#intro').hidden)showIntro();toast('Nu mă pot conecta acum la cont. Lucrezi local, pe acest dispozitiv.');return}
@@ -1223,6 +1378,8 @@ function draw(){
   else if(gh&&JBT[gh.type]){const q=jbPt(gh.x,gh.y);if(q){const k=JB[JBT[gh.type]].k+1;ctx.strokeStyle=C.accent;ctx.lineWidth=2;ctx.globalAlpha=.7;ctx.strokeRect(sx(q.x)-k,sy(q.y)-k,2*k,2*k);ctx.globalAlpha=1}}
   else if(gh){const q=placePt(gh.type,gh.x,gh.y);sym(gh.type,sx(q.x),sy(q.y),r0,C.accent,true,gh.type==='prizaM'?(lastN>1?'P'+lastN:'P'):undefined)}
   $('#scaleLbl').textContent=`grilă ${f(step,step<1?1:0)} m · ${Math.round(view.s)} px/m`;
+  {const v=3779.5/view.s,N=[5,10,20,25,50,75,100,125,150,200,250,300,400,500,750,1000];$('#zPct').textContent='1:'+N.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a)}
+  placeSelbar();
 }
 
 function hitItem(X,Y){let b=null,bd=18;for(const it of P.items){if(focusId&&it.room!==focusId&&it.type!=='tablou')continue;const d=Math.hypot(sx(it.x)-X,sy(it.y)-Y);if(d<bd){bd=d;b=it}}return b}
@@ -1834,20 +1991,33 @@ function svgSym(type){
   return `<svg viewBox="0 0 32 32" aria-hidden="true">${s}</svg>`;
 }
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-let openGrp=lsGet('electroplan.tg')||'Plan',recentT=(()=>{try{return JSON.parse(lsGet('electroplan.recent')||'[]').filter(t=>SHORT[t])}catch(e){return[]}})();
+const CATS=[['Desen','schita',['schita','scris','room','usa','geam','gol'],'Desenează conturul cu penul sau trage camere, apoi pune ușile și ferestrele pe pereți.'],
+['Pereți','rez',['rez','grinda'],'Marchează pereții de rezistență și grinzile, ca traseele să le ocolească.'],
+['Prize','priza',['priza','priza2','prizaM','prizaip','tv'],'Atinge un perete ca să plasezi. Înălțimea se pune singură, după I7.'],
+['Lumini','lumina',['lumina','spot','aplica'],'Atinge camera ca să pui corpul de iluminat.'],
+['Comenzi','intr',['intr','intr2','intrCS','intrCR'],'Pune întrerupătorul lângă ușă, pe partea clanței.'],
+['Aparate','ded',['msr','msv','cuptor','plita','ac','boiler','ded'],'Consumatorii mari primesc circuit dedicat, cu protecția potrivită.'],
+['Doze','dozaM',['dozaS','dozaM','dozaL'],'Doze de derivație puse de tine. Altfel aplicația le alege singură.'],
+['Tablou','tablou',['tablou','trecere'],'Tabloul electric și trecerile de cabluri între niveluri.']];
+let flyCat=null;
 function renderTools(){
-  const btn=t=>`<button class="tool" type="button" data-tool="${t}" aria-pressed="${t===tool}" title="${esc(T[t]?T[t].n:SHORT[t])}">${svgSym(t)}<span>${SHORT[t]}</span></button>`;
-  const rec=recentT.filter(t=>t!=='select').slice(0,4);
-  $('#tools').innerHTML=`<div class="tg">${btn('select')}</div>`+(rec.length?`<div class="tg"><span class="tg-h tg-rec">Recente</span>${rec.map(btn).join('')}</div>`:'')+
-    TOOLS.map(([l,ts])=>{const items=ts.filter(t=>t!=='select'),open=l===openGrp,act=items.includes(tool);return`<div class="tg${open?' open':''}"><button class="tg-h${act?' act':''}" type="button" data-grp="${esc(l)}" aria-expanded="${open}">${svgSym(items[0])}<span>${l}</span><i aria-hidden="true">${open?'▴':'▾'}</i></button>${open?items.map(btn).join(''):''}</div>`}).join('');
+  const cur=CATS.find(c=>c[2].includes(tool));
+  $('#tools').innerHTML=`<button class="rail-b${tool==='select'?' on':''}" type="button" data-tool="select" aria-pressed="${tool==='select'}" title="Selectează">${svgSym('select')}<span>Selectează</span></button><hr class="rail-sep">`+CATS.map(([n,ic])=>{const on=cur&&cur[0]===n;return`<button class="rail-b${on?' on':''}${flyCat===n?' open':''}" type="button" data-cat="${n}" aria-expanded="${flyCat===n}" title="${n}">${svgSym(on?tool:ic)}<span>${on?SHORT[tool]:n}</span></button>`}).join('');
+  const fl=$('#fly');if(!flyCat){fl.hidden=true;return}
+  const c=CATS.find(x=>x[0]===flyCat);
+  fl.innerHTML=`<div class="fly-h"><b>${c[0]}</b><button class="btn ic" type="button" data-flyx aria-label="Închide">✕</button></div><p>${c[3]}</p><div class="fly-t">${c[2].map(t=>`<button class="ftile${t===tool?' on':''}" type="button" data-tool="${t}" aria-pressed="${t===tool}">${svgSym(t)}<span>${SHORT[t]}</span></button>`).join('')}</div>`;
+  fl.hidden=false;
 }
-$('#tools').addEventListener('click',e=>{const g=e.target.closest('[data-grp]');if(g){openGrp=openGrp===g.dataset.grp?'':g.dataset.grp;lsSet('electroplan.tg',openGrp);renderTools();return}const b=e.target.closest('[data-tool]');if(!b)return;setTool(b.dataset.tool)});
-function setTool(t){if(meas&&t!=='select')endMeas(false);tool=t;if(t!=='select'&&SHORT[t]&&recentT[0]!==t){recentT=[t,...recentT.filter(x=>x!==t)].slice(0,6);lsSet('electroplan.recent',JSON.stringify(recentT));const g=TOOLS.find(([,ts])=>ts.includes(t));if(g)openGrp=g[0];renderTools()}if(t!=='scris')txStrokes=[];if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
+$('#tools').addEventListener('click',e=>{const c=e.target.closest('[data-cat]');if(c){flyCat=flyCat===c.dataset.cat?null:c.dataset.cat;renderTools();return}const b=e.target.closest('[data-tool]');if(b){flyCat=null;setTool(b.dataset.tool)}});
+$('#fly').addEventListener('click',e=>{if(e.target.closest('[data-flyx]')){flyCat=null;renderTools();return}const b=e.target.closest('[data-tool]');if(b){flyCat=null;setTool(b.dataset.tool)}});
+$('#stage').addEventListener('pointerdown',()=>{if(flyCat){flyCat=null;renderTools()}},true);
+function setTool(t){if(meas&&t!=='select')endMeas(false);tool=t;renderTools();if(t!=='scris')txStrokes=[];if(t!=='select'&&sel){sel=null;renderInspector()}renderSelbar();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));cv.style.cursor=t==='select'?'default':'crosshair';draw()}
 function renderLayers(){
-  const L=[['routes','Trasee'],['boxes','Doze'],['cmd','Comenzi'],['tags','Circuite'],['dims','Cote']];
-  $('#layers').innerHTML=L.map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
+  const L=[['routes','Trasee'],['boxes','Doze'],['cmd','Comenzi'],['tags','Circuite'],['dims','Cote']],q=['routes','boxes','dims'];
+  $('#layersQ').innerHTML=L.filter(([k])=>q.includes(k)).map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
+  $('#layers').innerHTML=L.filter(([k])=>!q.includes(k)).map(([k,n])=>`<button class="chip" type="button" data-layer="${k}" aria-pressed="${layers[k]}">${n}</button>`).join('');
 }
-$('#layers').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;layers[b.dataset.layer]=!layers[b.dataset.layer];b.setAttribute('aria-pressed',layers[b.dataset.layer]);if(b.dataset.layer==='routes'){if(!layers.routes)isoId='';renderIso()}draw()});
+for(const LL of[$('#layers'),$('#layersQ')])LL.addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;layers[b.dataset.layer]=!layers[b.dataset.layer];b.setAttribute('aria-pressed',layers[b.dataset.layer]);if(b.dataset.layer==='routes'){if(!layers.routes)isoId='';renderIso()}draw()});
 
 const opt=(o,v)=>Object.entries(o).map(([k,n])=>`<option value="${k}"${k===v?' selected':''}>${esc(n)}</option>`).join('');
 function renderInspector(){
@@ -1914,6 +2084,7 @@ function renderInspector(){
     if(!r){sel=null;return renderInspector()}
     const par=r.of&&P.rooms.find(x=>x.id===r.of),nb=r.of?[]:[...new Map(P.rooms.filter(x=>x.id!==r.id&&x.of!==r.id&&(x.of||x.id)!==r.id&&sharedSeg(r,x)).map(x=>{const t=rootOf(P,x);return[t.id,t]})).values()];
     h=`<div class="ihead">${svgSym('room')}<div><h2>${esc(r.name)}</h2><p class="sub">${par?'Parte din '+esc(par.name):'Cameră'} · trage din nou ca s-o muți</p></div></div>
+    ${roomTabs()}${inspTab==='sum'?roomSummary(r):`
     ${par?`<div class="bar"><span class="muted" style="font-size:13px">Peretele dintre ele lipsește. Elementele de aici aparțin camerei ${esc(par.name)}.</span><button class="btn" type="button" data-act="unmerge">Separă</button></div>`:nb.length?`<div><h4>Fără perete între ele</h4><div class="bar">${nb.map(x=>`<button class="btn" type="button" data-act="merge" data-room="${x.id}">Unește cu ${esc(x.name)}</button>`).join('')}</div></div>`:''}
     <div class="fields">
       <label class="f full">Nume<input data-s="room" data-f="name" id="r-name" value="${esc(r.name)}"></label>
@@ -1923,7 +2094,7 @@ function renderInspector(){
       <label class="f">Lungime (m)<input data-s="room" data-f="h" id="r-h" type="number" inputmode="decimal" min=".5" step=".05" value="${r.h}"></label>
     </div>
     <div id="insDyn"></div>
-    <div class="bar"><button class="btn dng" type="button" data-act="del">Șterge camera și elementele ei</button></div>`;
+    <div class="bar"><button class="btn dng" type="button" data-act="del">Șterge camera și elementele ei</button></div>`}`;
   }else if(focusId&&P.rooms.some(z=>z.id===focusId)){
     h=roomPanel(focusId);
   }else{
@@ -1951,13 +2122,13 @@ function renderInspector(){
   insp.innerHTML=`<div class="insp-bar"><span class="insp-grip" data-grip title="Trage ca să schimbi mărimea panoului" aria-hidden="true"></span><span class="insp-t"></span><button class="btn ic" type="button" data-min aria-label="${inspMin?'Arată panoul':'Minimizează panoul'}" title="${inspMin?'Arată panoul':'Minimizează panoul'}">${inspMin?'▴':'▾'}</button><button class="btn ic" type="button" data-x aria-label="Închide panoul">✕</button></div>`+h;{const t=insp.querySelector('h2');insp.querySelector('.insp-t').textContent=t?t.textContent:''}applyInsp();insp.hidden=!inspOpen;stage.classList.toggle('io',inspOpen);renderDyn();renderSelbar();
 }
 let inspOpen=false;
-function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector()}
+function setInsp(v){inspOpen=v;insp.hidden=!v;stage.classList.toggle('io',v);if(v)renderInspector();else placeSelbar()}
 let inspMin=false,inspSz=(()=>{try{return JSON.parse(localStorage.getItem('electroplan.insp')||'{}')}catch(e){return{}}})();
 const inspPortrait=()=>matchMedia('(max-width:760px),(orientation:portrait) and (max-width:1100px)').matches;
 function applyInsp(){const pt=inspPortrait();insp.classList.toggle('min',inspMin);insp.classList.toggle('pt',pt);
   if(pt){insp.style.width='';insp.style.height=inspMin?'':(inspSz.h?Math.min(inspSz.h,Hh-90)+'px':'');insp.style.maxHeight=inspMin||inspSz.h?'none':''}
   else{insp.style.height='';insp.style.maxHeight='';insp.style.width=inspMin?'':(inspSz.w?Math.min(inspSz.w,W-120)+'px':'')}
-  stage.style.setProperty('--inspW',(inspMin?220:(insp.offsetWidth||340))+'px')}
+  stage.style.setProperty('--inspW',(inspMin?220:(insp.offsetWidth||340))+'px');placeSelbar()}
 insp.addEventListener('click',e=>{if(e.target.closest('[data-min]')){inspMin=!inspMin;renderInspector()}});
 insp.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-grip],.insp-bar');if(!g||e.target.closest('button'))return;const pt=inspPortrait(),r=insp.getBoundingClientRect(),x0=e.clientX,y0=e.clientY;let moved=false;
   const mv=ev=>{const dx=ev.clientX-x0,dy=ev.clientY-y0;if(!moved&&Math.hypot(dx,dy)<6)return;moved=true;if(inspMin){inspMin=false;renderInspector()}
@@ -1971,7 +2142,7 @@ function renderSelbar(){
   if(tool!=='select'){el.innerHTML=`<span class="tag">${svgSym(tool)}<span>${tool==='schita'?(P.sketch.length||P.sketchErase.length?`${P.sketch.length} ${P.sketch.length===1?'linie':'linii'} desenate${P.sketchErase.length?', '+P.sketchErase.length+' '+(P.sketchErase.length===1?'perete șters':'pereți șterși'):''}. Continuă sau generează planul.`:'Desenează cu penul conturul casei și pereții dintre camere, ca pe hârtie.'):tool==='room'?'Trage pe grilă ca să desenezi o cameră':tool==='usa'?'Atinge un perete ca să pui ușa':tool==='geam'?'Atinge un perete ca să pui fereastra':JBT[tool]?'Atinge un perete ca să pui doza de '+JB[JBT[tool]].lbl+'. Traseele din cameră vor trece prin ea.':tool==='gol'?'Atinge peretele și trage pe porțiunea care lipsește':tool==='rez'?'Atinge peretele de rezistență și trage de-a lungul lui':tool==='grinda'?'Trage pe plan de-a lungul grinzii':'Atinge planul ca să pui: <b>'+esc(T[tool].n)+'</b>'}</span></span>${tool==='schita'?(`<button class="btn${skErase?'':' pri'}" type="button" data-sb="sk-pen" aria-pressed="${!skErase}">Creion</button><button class="btn${skErase?' pri':''}" type="button" data-sb="sk-erase" aria-pressed="${skErase}">Radieră</button>`)+(P.sketch.length||P.sketchErase.length?'<button class="btn" type="button" data-sb="sk-undo">↶ Ultima linie</button><button class="btn dng" type="button" data-sb="sk-clear">Șterge schița</button><button class="btn pri" type="button" data-sb="sk-gen">Generează planul</button>':''):'<button class="btn pri" type="button" data-sb="done">Gata, editez</button>'}`;return}
   if(pickSw){const ps=P.items.find(i=>i.id===pickSw);if(ps){el.innerHTML=`<span class="tag"><b>${esc(T[ps.type].n)}</b><span class="muted">atinge luminile pe care le aprinde; atinge din nou ca să o scoți · ${ctrlOf(P,ps).length} alese</span></span><button class="btn pri" type="button" data-sb="pickDone">Gata</button>`;return}pickSw=null}
   if(!sel&&focusId){const fr=P.rooms.find(z=>z.id===focusId),lv=(P.levels.find(l=>l.id===P.lvCur)||{}).name;if(fr){el.innerHTML=`<span class="tag"><span class="muted">${esc(lv||'')} ›</span><b>${esc(fr.name)}</b></span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde camera':'Detalii cameră'}</button><button class="btn pri" type="button" data-sb="exitRoom">Ieși din cameră</button>`;return}focusId=null}
-  if(!sel){el.innerHTML=`<span class="tag muted">Atinge un element ca să-l editezi</span><button class="btn" type="button" data-sb="proj">${inspOpen?'Ascunde':'Proiect și circuite'}</button>`;return}
+  if(!sel){el.innerHTML='';return}
   if(sel.kind==='seg'||sel.kind==='node'){
     const sg=sel.kind==='seg'?R.segs.find(q=>q.key===sel.key):null,nd=sel.kind==='node'?R.nodes.find(q=>(q.bkey||q.key)===sel.key):null;
     if(!sg&&!nd){el.innerHTML='';return}
@@ -2078,7 +2249,11 @@ $('#selbar').addEventListener('click',e=>{
 insp.addEventListener('click',e=>{
   if(e.target.closest('[data-x]')){setInsp(false);renderSelbar();return}
   const li=e.target.closest('[data-iso]');if(li){setIso(li.dataset.iso===isoId?'':li.dataset.iso);return}
+  const it=e.target.closest('[data-itab]');if(it){inspTab=it.dataset.itab;renderInspector();return}
   const b=e.target.closest('[data-act]');if(!b||!sel)return;
+  if(b.dataset.act==='goitem'){const q=P.items.find(i=>i.id===b.dataset.id);if(q){sel={kind:'item',id:q.id};centerOn(q);renderInspector();renderSelbar();draw()}return}
+  if(b.dataset.act==='measure'){startMeas(sel.id);return}
+  if(b.dataset.act==='enter'){const r=P.rooms.find(x=>x.id===sel.id);if(r)enterRoom(r.of||r.id);return}
   const act=b.dataset.act,d=sel.kind==='door'?P.doors.find(i=>i.id===sel.id):null;
   if(act==='pick'&&sel.kind==='item'){pickSw=sel.id;setInsp(false);renderSelbar();draw();return}
   if(act==='ctrlAuto'&&sel.kind==='item'){const it=P.items.find(i=>i.id===sel.id);if(it){snap();delete it.ctrl;changed(true)}return}
@@ -2305,7 +2480,7 @@ function showTab(t){if(meas&&t!=='plan')endMeas(false);
 function renderTab(){if(tab==='calcul')renderCalc();else if(tab==='materiale')renderMat();else if(tab==='oferta')renderOffer();else if(tab==='lucrari')renderWork();else if(tab==='admin'){renderAdmin();loadAdmin()}}
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab)});
 
-function changed(full){R=computeLv();renderIso();renderLevels();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
+function changed(full){R=computeLv();renderIso();renderLevels();renderStat();draw();if(full)renderInspector();else renderDyn();if(tab!=='plan')renderTab();save()}
 let focusId=null;
 function loadJsPDF(){return window.jspdf?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('jspdf'));document.head.appendChild(sc)})}
 const PW=2480,PH=1754,PM=70;
@@ -2746,6 +2921,48 @@ $('#v-admin').addEventListener('click',async e=>{
   if(r&&r.error){toast('Acțiunea nu a reușit: '+(r.error.message||'eroare'));return}
   toast({suspend:'Cont suspendat.',activate:'Cont activat.',d30:'Prelungit cu 30 de zile.',d365:'Prelungit cu un an.',kick:'Dispozitiv deconectat.',del:'Cont șters.'}[k]);loadAdmin();
 });
+function renderStat(){
+  const el=$('#statc');if(!el)return;if(!RA){el.innerHTML='';return}
+  const n=RA.boards.reduce((t,b)=>t+b.circuits.length,0),w=RA.levels.reduce((t,l)=>t+((l.R&&l.R.warn)||[]).length,0)+(R?Object.keys(R.flag||{}).length:0),tb=RA.boards[0]&&RA.boards[0].tot;
+  el.innerHTML=(n?`<button class="schip ${w?'':'ok'}" type="button" data-st="calc"><i style="background:${w?'var(--muted)':'var(--ok)'}"></i>${n} ${n===1?'circuit':'circuite'}${w?'':' conforme I7'}</button>`:'<span class="schip"><i style="background:var(--muted)"></i>Pune aparatele și tabloul pe plan</span>')+
+    (w?`<button class="schip w" type="button" data-st="calc"><i style="background:var(--warn)"></i>${w} ${w===1?'atenționare':'atenționări'}</button>`:'')+
+    (tb&&n?`<button class="schip kw" type="button" data-st="calc">${f(tb.Pc/1000,1)} kW · ${tb.main?'C'+tb.main:'—'} · ${tb.panel} mod.</button>`:'')+
+    `<button class="schip pj" type="button" data-st="proj" title="Setări proiect, niveluri">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>'}<span>Proiect</span></button>`;
+}
+$('#statc').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;if(b.dataset.st==='calc')showTab('calcul');else{sel=null;setInsp(!inspOpen||!!sel);renderSelbar();draw()}});
+function selBox(){
+  if(!sel)return null;let pts=[];
+  if(sel.kind==='room'){const r=P.rooms.find(x=>x.id===sel.id);if(!r)return null;const root=r.of||r.id;for(const z of P.rooms.filter(q=>q.id===root||q.of===root))pts.push([z.x,z.y],[z.x+z.w,z.y+z.h],[z.x+z.w,z.y],[z.x,z.y+z.h])}
+  else{const q=selPoint();if(!q)return null;pts=[[q.x,q.y]]}
+  const S=pts.map(([x,y])=>toScr(sx(x),sy(y)));return{x0:Math.min(...S.map(p=>p.X)),x1:Math.max(...S.map(p=>p.X)),y0:Math.min(...S.map(p=>p.Y)),y1:Math.max(...S.map(p=>p.Y))};
+}
+function placeSelbar(){
+  const el=$('#selbar');if(!el||!el.innerHTML){return}
+  const pad=10,top0=(($('#statc')||{}).offsetHeight||0)+20,avail=W-(stage.classList.contains('io')&&!inspPortrait()?(insp.offsetWidth||340)+20:0);
+  el.classList.toggle('anch',!!(sel&&!focusId));el.style.maxWidth=Math.max(240,Math.min(sel&&!focusId?560:9999,avail-2*pad))+'px';const w=el.offsetWidth,h=el.offsetHeight,b=sel&&!focusId?selBox():null;
+  let L=pad,T=top0;
+  if(b){L=clamp((b.x0+b.x1)/2-w/2,pad,Math.max(pad,avail-w-pad));T=b.y0-h-12;if(T<top0)T=b.y0+12<top0?top0:b.y0+12;if(T+h>Hh-80)T=Math.max(top0,Hh-80-h)}
+  el.style.left=Math.round(L)+'px';el.style.top=Math.round(T)+'px';
+}
+let inspTab='sum';
+function roomTabs(){return`<div class="itabs" role="tablist"><button type="button" data-itab="sum" aria-selected="${inspTab==='sum'}">Rezumat</button><button type="button" data-itab="det" aria-selected="${inspTab==='det'}">Detalii</button></div>`}
+function roomSummary(r){
+  const root=r.of||r.id,rr=P.rooms.find(z=>z.id===root)||r,grp=P.rooms.filter(z=>z.id===root||z.of===root),gid=new Set(grp.map(z=>z.id)),its=P.items.filter(i=>gid.has(i.room));
+  const g=i=>T[i.type].g,pr=its.filter(i=>g(i)==='priza').reduce((t,i)=>t+ptsOf(i),0),lu=its.filter(i=>g(i)==='lum').length,sw=its.filter(i=>g(i)==='intr').length,de=its.filter(i=>g(i)==='ded').length;
+  const area=grp.reduce((t,z)=>t+z.w*z.h,0),dims=grp.length===1?`${Math.round(rr.w*100)} × ${Math.round(rr.h*100)} cm`:`${f(area,1)} m²`;
+  const fl=R?its.filter(i=>R.flag&&R.flag[i.id]):[],ck=[];
+  for(const i of fl)ck.push(`<li class="w"><i>!</i><span><b>${esc(T[i.type].n)}:</b> ${esc(R.flag[i.id])}</span><button class="btn" type="button" data-act="goitem" data-id="${i.id}">Arată</button></li>`);
+  if(!fl.length&&its.length)ck.push(`<li><i class="ok">✓</i><span>Aparatele respectă distanțele față de uși, ferestre și pereții de rezistență.</span></li>`);
+  if(!pr&&!['baie','hol','debara'].includes(rr.type))ck.push(`<li class="w"><i>!</i><span>Camera nu are nicio priză.</span></li>`);
+  if(!lu)ck.push(`<li class="w"><i>!</i><span>Camera nu are iluminat.</span></li>`);
+  else if(!sw&&!its.some(i=>g(i)==='lum'&&ctrlBy(P,i).length))ck.push(`<li class="w"><i>!</i><span>Lumina nu are întrerupător.</span></li>`);
+  const cids=[...new Set(its.map(i=>R&&R.by[i.id]).filter(Boolean))],cs=cids.map(id=>R.circuits.find(c=>c.id===id)).filter(Boolean);
+  return`<div class="rsum"><div class="sub">${dims} · înălțime ${Math.round(P.H*100)} cm · ${WM[rr.wall||P.wallMat||'caramida']}</div>
+    <div class="kpis"><div><b>${pr}</b><span>${pr===1?'priză':'prize'}</span></div><div><b>${lu}/${sw}</b><span>lumini / întrer.</span></div><div><b>${de}</b><span>${de===1?'dedicat':'dedicați'}</span></div></div>
+    <div><h4>Verificări</h4><ul class="rchk">${ck.join('')||'<li><i>·</i><span>Pune aparate în cameră ca să vezi verificările.</span></li>'}</ul></div>
+    ${cs.length?`<div><h4>Circuite în cameră</h4><div class="rcirc">${cs.map(c=>`<div><span class="dot" style="background:${colOf(c.id)}"></span><b class="mono">${c.id}</b><span>${esc(c.name)} · ${c.curve}${c.In}${c.rcd?' · ΔI 30 mA':''}</span><small class="mono">${f(c.Ib,1)} A</small></div>`).join('')}</div></div>`:''}
+    <div class="bar"><button class="btn pri" type="button" data-act="measure">Măsoară camera</button>${focusId?'':'<button class="btn" type="button" data-act="enter">Intră în cameră</button>'}</div></div>`;
+}
 function groupOf(id){return P.rooms.filter(z=>z.id===id||z.of===id)}
 function fitRects(rs,pad){const x0=Math.min(...rs.map(r=>r.x)),y0=Math.min(...rs.map(r=>r.y)),x1=Math.max(...rs.map(r=>r.x+r.w)),y1=Math.max(...rs.map(r=>r.y+r.h));const side=inspOpen&&!view.rot&&W>760&&!matchMedia('(orientation:portrait) and (max-width:1100px)').matches,bot=inspOpen&&!view.rot&&!side;const AW=W-(side?(insp.offsetWidth||340)+30:0),AH=Hh-(bot?(insp.offsetHeight||Hh*.55)+20:0),sw=Math.abs(Math.sin(view.rot))>.7,FW=(sw?AH:AW)-pad*2,FH=(sw?AW:AH)-pad*2;view.auto=false;view.s=clamp(Math.min(FW/Math.max(.5,x1-x0),FH/Math.max(.5,y1-y0)),12,320);view.ox=AW/2-(x0+x1)/2*view.s;view.oy=AH/2-(y0+y1)/2*view.s}
 function enterRoom(id){if(!P.rooms.some(z=>z.id===id))return;focusId=id;sel=null;isoId='';renderIso();setInsp(true);fitRects(groupOf(id),60);renderSelbar();draw()}
@@ -2806,8 +3023,9 @@ insp.addEventListener('change',e=>{
   if(k==='name'){l.name=el.value.trim()||l.name}else{const v=parseFloat(el.value);if(isFinite(v))l.elev=v}
   changed(true);renderLevels();
 });
-function renderProjSel(){$('#projSel').innerHTML=store.projects.map(p=>`<option value="${p.id}"${p.id===P.id?' selected':''}>${esc(p.name)}</option>`).join('')}
+function renderProjSel(){$('#projSel').innerHTML=store.projects.map(p=>`<option value="${p.id}"${p.id===P.id?' selected':''}>${esc(p.name)}</option>`).join('');const lv=(P.levels||[]).find(l=>l.id===P.lvCur),sub=[P.adresa||P.client,lv&&P.levels.length>1?lv.name:''].filter(Boolean).join(' · ');$('#projName').textContent=P.name+' ▾';$('#projSub').textContent=sub||'Atinge pentru toate proiectele'}
 function openProject(p){if(meas)endMeas(false);P=p;store.current=p.id;undoS=[];redoS=[];sel=null;focusId=null;editTask=null;renderProjSel();renderLevels();R=computeLv();fit();changed(true)}
+$('#projBtn').onclick=()=>{introMenu=null;showIntro()};
 $('#projSel').onchange=e=>{const p=store.projects.find(x=>x.id===e.target.value);if(p)openProject(p)};
 $('#newProj').onclick=()=>{const p=norm(blank('Proiect '+(store.projects.length+1)));store.projects.push(p);openProject(p);showTab('plan');setTool('room');if(lsGet('electroplan.guide')!=='off')setTimeout(openGuide,300)};
 function openGuide(){$('#guideOff').checked=lsGet('electroplan.guide')==='off';$('#guideDlg').showModal()}
@@ -2865,7 +3083,7 @@ $('#installBtn').onclick=async()=>{if(!deferredInstall)return;deferredInstall.pr
 window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;toast('Aplicația a fost instalată. O găsești pe ecranul de pornire.')});
 if('serviceWorker' in navigator&&window.isSecureContext&&/^https?:$/.test(location.protocol)&&!window.claude)navigator.serviceWorker.register('sw.js').catch(()=>{});
 readColors();renderTools();renderLayers();renderProjSel();renderLevels();
-R=computeLv();renderIso();
+R=computeLv();renderIso();renderStat();
 renderInspector();
 const b=stage.getBoundingClientRect();W=b.width;Hh=b.height;fit();resize();
 connectCloud();
@@ -2909,6 +3127,7 @@ function useStore(key,migrate){
 let siteMode=!window.claude&&!!SB_KEY&&/^https?:$/.test(location.protocol);
 const gated=()=>siteMode&&!sbUser;
 function showIntro(){
+  document.querySelectorAll('dialog[open]').forEach(d=>{try{d.close()}catch(e){}});
   const el=$('#intro'),ps=store.projects.slice().sort((a,b)=>(b.updated||0)-(a.updated||0)),last=ps.find(x=>!x.sample)||ps[0];
   const rel=t=>{if(!t)return'nesalvat încă';const d=(Date.now()-t)/1000;if(d<90)return'acum';if(d<3600)return Math.round(d/60)+' min în urmă';if(d<86400)return Math.round(d/3600)+' h în urmă';return new Date(t).toLocaleDateString('ro-RO')};
   $('#introActs').innerHTML=`${last?`<button class="ib pri" type="button" data-io="open" data-id="${last.id}">Continuă: ${esc(last.name.length>28?last.name.slice(0,27)+'…':last.name)}</button>`:''}<button class="ib${last?'':' pri'}" type="button" data-io="new">+ Proiect nou</button>${sb&&!sbUser?'<button class="ib" type="button" data-io="login">Conectează-te</button>':''}`;
